@@ -30,7 +30,7 @@
     </build-deliverables>
     <workflow />
     <matlab>
-      <root>C:\Program Files\MATLAB\R2020a</root>
+      <root>C:\Program Files\MATLAB\R2021a</root>
       <toolboxes>
         <toolbox name="neuralnetwork" />
       </toolboxes>
