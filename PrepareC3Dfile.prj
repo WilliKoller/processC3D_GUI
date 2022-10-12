@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="4105803935" file="C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile.prj" location="C:\Users\Willi\Documents\Github\processC3D_GUI" name="PrepareC3Dfile" preferred-package-location="C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="4105803935" file="C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile.prj" location="C:\Users\willi\Documents\GitHub\processC3D_GUI" name="PrepareC3Dfile" preferred-package-location="C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>PrepareC3Dfile</param.appname>
     <param.icon>${PROJECT_ROOT}\PrepareC3Dfile_resources\icon.ico</param.icon>
     <param.icons>
@@ -9,9 +9,9 @@
       <file>${PROJECT_ROOT}\PrepareC3Dfile_resources\icon_16.png</file>
     </param.icons>
     <param.version>1.3</param.version>
-    <param.authnamewatermark />
-    <param.email />
-    <param.company />
+    <param.authnamewatermark>Willi Koller</param.authnamewatermark>
+    <param.email>willi.koller@univie.ac.at</param.email>
+    <param.company>University of Vienna</param.company>
     <param.summary>This tool creates all files to process a c3d file with OpenSim.
 It is necessary to have OpenSim 4.2 installed with default path</param.summary>
     <param.description />
@@ -99,9 +99,9 @@ It is necessary to have OpenSim 4.2 installed with default path</param.summary>
       <file>C:\Users\Willi\Documents\OpenSim\4.2\Code\Matlab\Utilities\osimTableToStruct.m</file>
     </fileset.depfun>
     <build-deliverables>
-      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="splash.png" optional="false">C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile\for_testing\splash.png</file>
-      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="readme.txt" optional="true">C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile\for_testing\readme.txt</file>
-      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="PrepareC3Dfile.exe" optional="false">C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile\for_testing\PrepareC3Dfile.exe</file>
+      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="splash.png" optional="false">C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_testing\splash.png</file>
+      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="readme.txt" optional="true">C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_testing\readme.txt</file>
+      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="PrepareC3Dfile.exe" optional="false">C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_testing\PrepareC3Dfile.exe</file>
     </build-deliverables>
     <workflow />
     <matlab>
