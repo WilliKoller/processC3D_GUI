@@ -8,7 +8,7 @@
       <file>${PROJECT_ROOT}\PrepareC3Dfile_resources\icon_24.png</file>
       <file>${PROJECT_ROOT}\PrepareC3Dfile_resources\icon_16.png</file>
     </param.icons>
-    <param.version>1.3</param.version>
+    <param.version>1.4</param.version>
     <param.authnamewatermark />
     <param.email />
     <param.company />
@@ -85,6 +85,9 @@ It is necessary to have OpenSim 4.2 installed with default path</param.summary>
     </fileset.resources>
     <fileset.package />
     <fileset.depfun>
+      <file>C:\Program Files\MATLAB\addons\btk\btkGetAnalogFrequency.mexw64</file>
+      <file>C:\Program Files\MATLAB\addons\btk\btkGetAnalogs.mexw64</file>
+      <file>C:\Program Files\MATLAB\addons\btk\btkGetAnalogSampleNumberPerFrame.mexw64</file>
       <file>C:\Program Files\MATLAB\addons\btk\btkGetEvents.mexw64</file>
       <file>C:\Program Files\MATLAB\addons\btk\btkGetFirstFrame.mexw64</file>
       <file>C:\Program Files\MATLAB\addons\btk\btkGetForcePlatforms.mexw64</file>
