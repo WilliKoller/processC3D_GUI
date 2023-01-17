@@ -1,8 +1,8 @@
-PrepareC3Dfile Executable
+ProcessC3D Executable
 
 1. Prerequisites for Deployment 
 
-Verify that version 9.10 (R2021a) of the MATLAB Runtime is installed.   
+Verify that version 9.12 (R2022a) of the MATLAB Runtime is installed.   
 If not, you can run the MATLAB Runtime installer.
 To find its location, enter
   
@@ -11,7 +11,7 @@ To find its location, enter
 at the MATLAB prompt.
 NOTE: You will need administrator rights to run the MATLAB Runtime installer. 
 
-Alternatively, download and install the Windows version of the MATLAB Runtime for R2021a 
+Alternatively, download and install the Windows version of the MATLAB Runtime for R2022a 
 from the following link on the MathWorks website:
 
     https://www.mathworks.com/products/compiler/mcr/index.html
@@ -24,7 +24,7 @@ in the MathWorks Documentation Center.
 
 Files to Package for Standalone 
 ================================
--PrepareC3Dfile.exe
+-ProcessC3D.exe
 -MCRInstaller.exe 
     Note: if end users are unable to download the MATLAB Runtime using the
     instructions in the previous section, include it when building your 

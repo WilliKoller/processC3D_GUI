@@ -8,8 +8,8 @@
     <param.icons />
     <param.summary />
     <param.description />
-    <param.screenshot>C:\Users\willi\AppData\Local\Temp\tp3d24ba05_eb6a_413a_95ef_b401a4ea8457.png</param.screenshot>
-    <param.version>1.1</param.version>
+    <param.screenshot>C:\Users\willi\AppData\Local\Temp\tp8c743ef1_d1e1_40f8_be94_3e06059f149e.png</param.screenshot>
+    <param.version>1.3</param.version>
     <param.products.name />
     <param.products.id />
     <param.products.version />
@@ -41,7 +41,7 @@
     </build-deliverables>
     <workflow />
     <matlab>
-      <root>C:\Program Files\MATLAB\R2021a</root>
+      <root>C:\Program Files\MATLAB\R2022a</root>
       <toolboxes>
         <toolbox name="neuralnetwork" />
       </toolboxes>
