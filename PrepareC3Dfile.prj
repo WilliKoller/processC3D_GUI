@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="3995862198" file="C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile.prj" location="C:\Users\willi\Documents\GitHub\processC3D_GUI" name="PrepareC3Dfile" preferred-package-location="C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="3029887537" file="C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile.prj" location="C:\Users\willi\Documents\GitHub\processC3D_GUI" name="PrepareC3Dfile" preferred-package-location="C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>ProcessC3D</param.appname>
     <param.icon>${PROJECT_ROOT}\PrepareC3Dfile_resources\icon.ico</param.icon>
     <param.icons>
@@ -78,29 +78,29 @@ It is necessary to have OpenSim 4.2 installed with default path</param.summary>
       <file>${PROJECT_ROOT}\processC3D.mlapp</file>
     </fileset.main>
     <fileset.resources>
-      <file>C:\Program Files\MATLAB\addons\sonstiges\load_sto_file.m</file>
-      <file>C:\Program Files\MATLAB\addons\sonstiges\write_sto_file.m</file>
+      <file>${PROJECT_ROOT}\btkGetAnalogFrequency.mexw64</file>
+      <file>${PROJECT_ROOT}\btkGetAnalogs.mexw64</file>
+      <file>${PROJECT_ROOT}\btkGetAnalogSampleNumberPerFrame.mexw64</file>
+      <file>${PROJECT_ROOT}\btkGetEvents.mexw64</file>
+      <file>${PROJECT_ROOT}\btkGetFirstFrame.mexw64</file>
+      <file>${PROJECT_ROOT}\btkGetForcePlatforms.mexw64</file>
+      <file>${PROJECT_ROOT}\btkGetPointFrameNumber.mexw64</file>
+      <file>${PROJECT_ROOT}\btkGetPointFrequency.mexw64</file>
+      <file>${PROJECT_ROOT}\btkReadAcquisition.mexw64</file>
       <file>${PROJECT_ROOT}\climbing_forces.xml</file>
       <file>${PROJECT_ROOT}\GRF_file_all.xml</file>
       <file>${PROJECT_ROOT}\GRF_file_empty.xml</file>
+      <file>${PROJECT_ROOT}\load_marker_trc.m</file>
+      <file>${PROJECT_ROOT}\load_sto_file.m</file>
+      <file>${PROJECT_ROOT}\MFquestdlg.m</file>
+      <file>${PROJECT_ROOT}\readtext.m</file>
+      <file>${PROJECT_ROOT}\write_sto_file.m</file>
+      <file>${PROJECT_ROOT}\xml_read.m</file>
+      <file>${PROJECT_ROOT}\xml_write.m</file>
+      <file>${PROJECT_ROOT}\xmlwrite_xerces.m</file>
     </fileset.resources>
     <fileset.package />
     <fileset.depfun>
-      <file>C:\Program Files\MATLAB\addons\btk\btkGetAnalogFrequency.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\btk\btkGetAnalogs.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\btk\btkGetAnalogSampleNumberPerFrame.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\btk\btkGetEvents.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\btk\btkGetFirstFrame.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\btk\btkGetForcePlatforms.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\btk\btkGetPointFrameNumber.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\btk\btkGetPointFrequency.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\btk\btkReadAcquisition.mexw64</file>
-      <file>C:\Program Files\MATLAB\addons\gibbon\lib_ext\xml_io_tools\xmlwrite_xerces.m</file>
-      <file>C:\Program Files\MATLAB\addons\sonstiges\load_marker_trc.m</file>
-      <file>C:\Program Files\MATLAB\addons\sonstiges\MFquestdlg.m</file>
-      <file>C:\Program Files\MATLAB\addons\sonstiges\readtext.m</file>
-      <file>C:\Program Files\MATLAB\addons\sonstiges\xml_read.m</file>
-      <file>C:\Program Files\MATLAB\addons\sonstiges\xml_write.m</file>
       <file>C:\Users\Willi\Documents\OpenSim\4.2\Code\Matlab\Utilities\osimC3D.m</file>
       <file>C:\Users\Willi\Documents\OpenSim\4.2\Code\Matlab\Utilities\osimTableToStruct.m</file>
     </fileset.depfun>
