@@ -69,6 +69,9 @@ for i = 1:length(data_label)
     if ~isempty(str2num(f_name(1)))
         f_name = ['N' f_name];
     end
+    if length(f_name) > 63
+        f_name = f_name(end-55 : end);
+    end
     out.(f_name) = data(:,i);
 end
 

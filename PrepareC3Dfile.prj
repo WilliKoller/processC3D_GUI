@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="3029887537" file="C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile.prj" location="C:\Users\willi\Documents\GitHub\processC3D_GUI" name="PrepareC3Dfile" preferred-package-location="C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="3029887537" file="C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile.prj" location="C:\Users\Willi\Documents\Github\processC3D_GUI" name="PrepareC3Dfile" preferred-package-location="C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>ProcessC3D</param.appname>
     <param.icon>${PROJECT_ROOT}\PrepareC3Dfile_resources\icon.ico</param.icon>
     <param.icons>
@@ -105,9 +105,9 @@ It is necessary to have OpenSim 4.2 installed with default path</param.summary>
       <file>C:\Users\Willi\Documents\OpenSim\4.2\Code\Matlab\Utilities\osimTableToStruct.m</file>
     </fileset.depfun>
     <build-deliverables>
-      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="splash.png" optional="false">C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_testing\splash.png</file>
-      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="ProcessC3D.exe" optional="false">C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_testing\ProcessC3D.exe</file>
-      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="readme.txt" optional="true">C:\Users\willi\Documents\GitHub\processC3D_GUI\PrepareC3Dfile\for_testing\readme.txt</file>
+      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="splash.png" optional="false">C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile\for_testing\splash.png</file>
+      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="ProcessC3D.exe" optional="false">C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile\for_testing\ProcessC3D.exe</file>
+      <file location="${PROJECT_ROOT}\PrepareC3Dfile\for_testing" name="readme.txt" optional="true">C:\Users\Willi\Documents\Github\processC3D_GUI\PrepareC3Dfile\for_testing\readme.txt</file>
     </build-deliverables>
     <workflow />
     <matlab>
