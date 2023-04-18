@@ -91,9 +91,9 @@ for row = 7 : numel(data) - 1
     for marker = 1 : numel(jointCenterNames)
         col = origNrOfCols + (marker-1)*3;
         if marker < numel(jointCenterNames)
-            data{4}{col} = jointCenterNames{marker};
+            data{4}{col} = [jointCenterNames{marker} 'WK'];
         else
-            data{4}{col} = [jointCenterNames{marker} ' '];
+            data{4}{col} = [jointCenterNames{marker} 'WK '];
         end
         for xyz = 1 : 3
             col = origNrOfCols + (marker-1)*3 + xyz - 1;
