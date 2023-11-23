@@ -68,10 +68,10 @@ for p = 1 : numel(participantFolders)
                 end
             end
 
-            LKJC=(squeeze(markerDataOfInterest(contains(markersOfInterest, 'LKNE'), :, :))+squeeze(markerDataOfInterest(contains(markersOfInterest, 'LKNM'), :, :)))/2;
-            RKJC=(squeeze(markerDataOfInterest(contains(markersOfInterest, 'RKNE'), :, :))+squeeze(markerDataOfInterest(contains(markersOfInterest, 'RKNM'), :, :)))/2;
-            LAJC=(squeeze(markerDataOfInterest(contains(markersOfInterest, 'LANK'), :, :))+squeeze(markerDataOfInterest(contains(markersOfInterest, 'LANM'), :, :)))/2;
-            RAJC=(squeeze(markerDataOfInterest(contains(markersOfInterest, 'RANK'), :, :))+squeeze(markerDataOfInterest(contains(markersOfInterest, 'RANM'), :, :)))/2;
+            LKJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LKNE'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LKNM'), :, :)))/2;
+            RKJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RKNE'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RKNM'), :, :)))/2;
+            LAJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LANK'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LANM'), :, :)))/2;
+            RAJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RANK'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RANM'), :, :)))/2;
             JointCenters.LKJC=LKJC;
             JointCenters.RKJC=RKJC;
 
