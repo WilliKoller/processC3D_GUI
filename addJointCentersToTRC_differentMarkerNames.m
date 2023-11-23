@@ -1,4 +1,4 @@
-folder = 'C:\Users\Willi\Documents\UniDataLokal\DATA_Hans_PhD\CP11\CP11 Cal 01\';
+folder = 'C:\Users\Willi\Documents\UniDataLokal\DATA_Hans_PhD\TD01\3DGAIT_A_DYN_KNEE\';
 
 markerData = load_marker_trc(fullfile(folder, 'marker_experimental.trc'));
 markerNames = fieldnames(markerData);
@@ -12,10 +12,10 @@ for i = 1 :numel(markersOfInterest)
     markerDataOfInterest(i, :, 3) = cell2mat(markerData.([markersOfInterest{i} '_Z']));
 end
 
-LKJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LKNE'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LKNM'), :, :)))/2;
-RKJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RKNE'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RKNM'), :, :)))/2;
-LAJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LANK'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LANM'), :, :)))/2;
-RAJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RANK'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RANM'), :, :)))/2;
+LKJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LKNE'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LKNEM'), :, :)))/2;
+RKJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RKNE'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RKNEM'), :, :)))/2;
+LAJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LANK'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LANKM'), :, :)))/2;
+RAJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RANK'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RANKM'), :, :)))/2;
 JointCenters.LKJC=LKJC;
 JointCenters.RKJC=RKJC;
 
