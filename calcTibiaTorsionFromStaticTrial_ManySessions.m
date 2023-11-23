@@ -5,7 +5,7 @@ baseFolder = 'C:\Users\willi\Documents\UniDataLokal\DEMAND\VICON_DATA_SCHMELZ';
 additionalSubDir = 1;
 
 participantFolders = GetSubDirsFirstLevelOnly(baseFolder);
-for p = 1 : numel(participantFolders)
+for p = 1 %: numel(participantFolders)
     sessions = [];
     if additionalSubDir == 1
         sessions = GetSubDirsFirstLevelOnly(fullfile(baseFolder, participantFolders{p}));
@@ -68,6 +68,8 @@ for p = 1 : numel(participantFolders)
                 end
             end
 
+            markerDataOfInterest = markerDataOfInterest(:, 1:10, :);
+
             LKJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LKNE'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LKNM'), :, :)))/2;
             RKJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RKNE'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RKNM'), :, :)))/2;
             LAJC=(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LANK'), :, :))+squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'LANM'), :, :)))/2;
@@ -126,7 +128,7 @@ for p = 1 : numel(participantFolders)
 
             % positve value = external rotation
             % negative value = internal rotation
-            save(fullfile(folder, 'tibiaTorsion.mat'), 'RtibiaTorsion', "LtibiaTorsion");
+            save(fullfile(folder, 'tibiaTorsion.mat'), 'RtibiaTorsion', 'LtibiaTorsion');
         end
     end
 end
