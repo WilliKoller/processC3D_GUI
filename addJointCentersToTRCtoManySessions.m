@@ -1,11 +1,13 @@
 clear;
 % baseFolder = 'C:\Users\willi\Documents\UniDataLokal\DATA_Hans_PhD';
 % additionalSubDir = 0;
-baseFolder = 'C:\Users\willi\Documents\UniDataLokal\DEMAND\VICON_DATA_SCHMELZ';
-additionalSubDir = 1;
+% baseFolder = 'C:\Users\willi\Documents\UniDataLokal\DEMAND\VICON_DATA_SCHMELZ';
+% additionalSubDir = 1;
+baseFolder = 'C:\Users\willi\ucloud\PhD\Study_LongitudinalMSK\GaitData';
+additionalSubDir = 0;
 
 participantFolders = GetSubDirsFirstLevelOnly(baseFolder);
-for p = 1 : numel(participantFolders)
+for p = 16 : numel(participantFolders)
     sessions = [];
     if additionalSubDir == 1
         sessions = GetSubDirsFirstLevelOnly(fullfile(baseFolder, participantFolders{p}));

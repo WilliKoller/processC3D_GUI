@@ -114,6 +114,38 @@
 				<!--Name of the data source (Storage) that will supply the force data.-->
 				<data_source_name></data_source_name>
 			</ExternalForce>
+			<ExternalForce name="grf_r_8">
+				<!--Name of the body the force is applied to.-->
+				<applied_to_body>calcn_r</applied_to_body>
+				<!--Name of the body the force is expressed in (default is ground).-->
+				<force_expressed_in_body>ground</force_expressed_in_body>
+				<!--Name of the body the point is expressed in (default is ground).-->
+				<point_expressed_in_body>ground</point_expressed_in_body>
+				<!--Identifier (string) to locate the force to be applied in the data source.-->
+				<force_identifier>ground_force_8_v</force_identifier>
+				<!--Identifier (string) to locate the point to be applied in the data source.-->
+				<point_identifier>ground_force_8_p</point_identifier>
+				<!--Identifier (string) to locate the torque to be applied in the data source.-->
+				<torque_identifier>ground_moment_8_m</torque_identifier>
+				<!--Name of the data source (Storage) that will supply the force data.-->
+				<data_source_name></data_source_name>
+			</ExternalForce>
+			<ExternalForce name="grf_r_9">
+				<!--Name of the body the force is applied to.-->
+				<applied_to_body>calcn_r</applied_to_body>
+				<!--Name of the body the force is expressed in (default is ground).-->
+				<force_expressed_in_body>ground</force_expressed_in_body>
+				<!--Name of the body the point is expressed in (default is ground).-->
+				<point_expressed_in_body>ground</point_expressed_in_body>
+				<!--Identifier (string) to locate the force to be applied in the data source.-->
+				<force_identifier>ground_force_9_v</force_identifier>
+				<!--Identifier (string) to locate the point to be applied in the data source.-->
+				<point_identifier>ground_force_9_p</point_identifier>
+				<!--Identifier (string) to locate the torque to be applied in the data source.-->
+				<torque_identifier>ground_moment_9_m</torque_identifier>
+				<!--Name of the data source (Storage) that will supply the force data.-->
+				<data_source_name></data_source_name>
+			</ExternalForce>
 			<ExternalForce name="grf_l_1">
 				<!--Name of the body the force is applied to.-->
 				<applied_to_body>calcn_l</applied_to_body>
@@ -223,6 +255,38 @@
 				<point_identifier>ground_force_7_p</point_identifier>
 				<!--Identifier (string) to locate the torque to be applied in the data source.-->
 				<torque_identifier>ground_moment_7_m</torque_identifier>
+				<!--Name of the data source (Storage) that will supply the force data.-->
+				<data_source_name></data_source_name>
+			</ExternalForce>
+			<ExternalForce name="grf_l_8">
+				<!--Name of the body the force is applied to.-->
+				<applied_to_body>calcn_l</applied_to_body>
+				<!--Name of the body the force is expressed in (default is ground).-->
+				<force_expressed_in_body>ground</force_expressed_in_body>
+				<!--Name of the body the point is expressed in (default is ground).-->
+				<point_expressed_in_body>ground</point_expressed_in_body>
+				<!--Identifier (string) to locate the force to be applied in the data source.-->
+				<force_identifier>ground_force_8_v</force_identifier>
+				<!--Identifier (string) to locate the point to be applied in the data source.-->
+				<point_identifier>ground_force_8_p</point_identifier>
+				<!--Identifier (string) to locate the torque to be applied in the data source.-->
+				<torque_identifier>ground_moment_8_m</torque_identifier>
+				<!--Name of the data source (Storage) that will supply the force data.-->
+				<data_source_name></data_source_name>
+			</ExternalForce>
+			<ExternalForce name="grf_l_9">
+				<!--Name of the body the force is applied to.-->
+				<applied_to_body>calcn_l</applied_to_body>
+				<!--Name of the body the force is expressed in (default is ground).-->
+				<force_expressed_in_body>ground</force_expressed_in_body>
+				<!--Name of the body the point is expressed in (default is ground).-->
+				<point_expressed_in_body>ground</point_expressed_in_body>
+				<!--Identifier (string) to locate the force to be applied in the data source.-->
+				<force_identifier>ground_force_9_v</force_identifier>
+				<!--Identifier (string) to locate the point to be applied in the data source.-->
+				<point_identifier>ground_force_9_p</point_identifier>
+				<!--Identifier (string) to locate the torque to be applied in the data source.-->
+				<torque_identifier>ground_moment_9_m</torque_identifier>
 				<!--Name of the data source (Storage) that will supply the force data.-->
 				<data_source_name></data_source_name>
 			</ExternalForce>

@@ -1,4 +1,4 @@
-folder = 'C:\Users\Willi\Documents\UniDataLokal\DATA_Hans_PhD\CP11\CP11 Cal 01\';
+folder = 'I:\data_speiseng\P01\pre\Static03_rot';
 
 markerData = load_marker_trc(fullfile(folder, 'marker_experimental.trc'));
 markerNames = fieldnames(markerData);
