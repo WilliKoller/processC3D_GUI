@@ -3,7 +3,7 @@ app.path = 'C:\Users\Willi\SynologyDrive\Hanging_Paper\Juliana\09_05_2023';
 app.emgLabelCSVPath = 'C:\Users\Willi\SynologyDrive\Hanging_Paper\emg_labels_d2_v2.csv';
 fileList = dir([app.path '\*.c3d']);
 
-for i = 21%1: numel(fileList)
+for i = 1: numel(fileList)
     app.c3dFileName = fileList(i).name;
     disp(['processing' app.c3dFileName]);
     

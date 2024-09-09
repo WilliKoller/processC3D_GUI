@@ -3,6 +3,7 @@ classdef processC3D_exported < matlab.apps.AppBase
     % Properties that correspond to app components
     properties (Access = public)
         PrepareC3DfileUIFigure          matlab.ui.Figure
+        normalizeEMGCheckBox            matlab.ui.control.CheckBox
         cutofffrequencySpinner_Marker   matlab.ui.control.Spinner
         cutofffrequencySpinner_2Label   matlab.ui.control.Label
         filterorderSpinner_Marker       matlab.ui.control.Spinner
@@ -311,7 +312,11 @@ classdef processC3D_exported < matlab.apps.AppBase
             emgFields = fieldnames(app.EMG);
             emgFields = emgFields(~contains(emgFields, 'frequency'));
             if size(emgFields, 1) ~= 0
-                app.EMG.time(1) = app.markers.time(1);
+                try
+                    app.EMG.time(1) = app.markers.time(1);
+                catch
+                    app.EMG.time(1) = 0;
+                end
                 for j = 2 : size(app.EMG.(emgFields{1}), 1)
                     app.EMG.time(j) = app.EMG.time(j-1) + 1/app.EMG.frequency;
                 end
@@ -325,52 +330,28 @@ classdef processC3D_exported < matlab.apps.AppBase
         function filterEMG(app)
             if ~isempty(app.EMG)
                 app.EMG_lowPass = struct;
-                
-                % code from Juliana
-                % Parameters:
-                f1 = 3;
-                f2 = 300;
-                fs = 1000;
-                windowSize = 25;
-                overlap = round(windowSize/2);
 
-%                 Fs = app.EMG.frequency;  % Sampling Frequency
-%                 band    = (2 / Fs) * [20, 400];
-%                 [bandpass_b, bandpass_a] = butter(1, band, 'bandpass');
-%                 [butter4_b, butter4_a] = butter(2, 10/(Fs/2), 'low'); % divide order by 2 because filtfilt doubles it again
+                Fs = app.EMG.frequency;  % Sampling Frequency
+                band    = (2 / Fs) * [20, 400];
+                [bandpass_b, bandpass_a] = butter(1, band, 'bandpass');
+                [butter4_b, butter4_a] = butter(2, 10/(Fs/2), 'low'); % divide order by 2 because filtfilt doubles it again
 
                 channels = fieldnames(app.EMG);
                 channels = channels(~contains(channels, 'frequency'));
                 channels = channels(~contains(channels, 'time'));
                 for i = 1 : numel(channels)
-                    % code from Juliana
-                    
-                    nyquist_freq = fs/2;  % Nyquist frequency
-                    Wn=[f1 f2]/nyquist_freq;    % non-dimensional frequency
-                    [filtb,filta]=butter(4,Wn,'bandpass'); % construct the filter
-                    filtered_signal=filtfilt(filtb,filta,app.EMG.(channels{i})); % filter the data with zero phase
-                    % EMG amplitude normallisation
-%                     emg_norm = filtered_signal./max(filtered_signal);
-%                     % Overlapping version:
-%                     num_windows = floor((length(emg_norm)-overlap) / (windowSize-overlap));
-%                     rmsval = zeros(num_windows,1);
-%                     % Calculate RMS for each window:
-%                     for rmsCtn = 1:num_windows
-%                         % Determine start and end indices for current window
-%                         start_idx = 1 + (rmsCtn-1)*(windowSize-overlap);
-%                         end_idx = start_idx + windowSize - 1;
-% 
-%                         % Calculate RMS for current window
-%                         rmsval(rmsCtn) = sqrt(mean(emg_norm(start_idx:end_idx).^2));
-%                     end
+                    tmp_after_bandpass = filter(bandpass_b, bandpass_a, app.EMG.(channels{i}), [], 1);
+                    EMG_demeaned            = tmp_after_bandpass - mean(tmp_after_bandpass); %demeaned
+                    EMG_rectified           = sqrt(EMG_demeaned.^2); %full wave rectified
+                    app.EMG_lowPass.(channels{i}) = filtfilt(butter4_b, butter4_a, EMG_rectified);
 
-                    app.EMG_lowPass.(channels{i}) = filtered_signal;
-%                     app.EMG_RMS.(channels{i}) = [rmsval; zeros(size(emg_norm, 1) - size(rmsval, 1), 1)];
-%                     tmp_after_bandpass = filter(bandpass_b, bandpass_a, app.EMG.(channels{i}), [], 1);
-%                     EMG_demeaned            = tmp_after_bandpass - mean(tmp_after_bandpass); %demeaned
-%                     EMG_rectified           = sqrt(EMG_demeaned.^2); %full wave rectified
-%                     app.EMG_lowPass.(channels{i}) = filtfilt(butter4_b, butter4_a, EMG_rectified);
-%                     app.EMG_lowPass.(channels{i})(app.EMG_lowPass.(channels{i})<0) = 0; %values under 0 (due to the low pass filter) are set to 0)
+                    app.EMG_lowPass.(channels{i}) = movmean(app.EMG_lowPass.(channels{i}), Fs*0.05);
+                    app.EMG_lowPass.(channels{i})(app.EMG_lowPass.(channels{i})<0) = 0; %values under 0 (due to the low pass filter) are set to 0)
+                    if app.normalizeEMGCheckBox.Value == 1
+                        app.EMG_lowPass.(channels{i}) = app.EMG_lowPass.(channels{i}) / max(app.EMG_lowPass.(channels{i}));
+                    else
+                        app.EMG_lowPass.(channels{i}) = app.EMG_lowPass.(channels{i});
+                    end
                 end
             end
         end
@@ -421,23 +402,16 @@ classdef processC3D_exported < matlab.apps.AppBase
                         app.rightFootOffList = [];
                     end                
                     if isempty(app.rightListBox.Items) && isempty(app.leftListBox.Items)
-                        if isfield(c3devents, 'General_Event')
-                            app.leftFootStrikeList = sprintfc('%.0f', c3devents.General_Event * app.frequency_);
-                            app.leftListBox.Items = app.leftFootStrikeList(1 : end-1);
-                            app.leftListBox.Value = app.leftFootStrikeList(1 : end-1);
-                        else
-                            % answer = MFquestdlg([0.4, 0.4], 'No events in the c3d file! Therefore, start and end of the trial as well as the foot contact with the force plates cannot be calculated automatically! Do you want to set the force plates manually?', 'Define manually?', 'Yes', 'No, I''ll experimentally check what the result of this is or select another file', 'Yes');
-                            answer = 'Yes';
-                            if ~strcmp(answer, 'Yes')
-                                return;
-                            end
-                            if strcmp(answer, 'Yes')
-                                app.Ignorec3deventsCheckBox.Value = 1;
-                                app.detectforceplatesautomaticallyCheckBox.Value = 0;
-                                app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 0;
-                                app.validfootstrikeeventsLabel.Visible = "off";
-                                app.forceplatecontactsLabel.Visible = "on";
-                            end
+                        answer = 'Yes'; % MFquestdlg([0.4, 0.4], 'No events in the c3d file! Therefore, start and end of the trial as well as the foot contact with the force plates cannot be calculated automatically! Do you want to set the force plates manually?', 'Define manually?', 'Yes', 'No, I''ll experimentally check what the result of this is or select another file', 'Yes');
+                        if ~strcmp(answer, 'Yes')
+                            return;
+                        end
+                        if strcmp(answer, 'Yes')
+                            app.Ignorec3deventsCheckBox.Value = 1;
+                            app.detectforceplatesautomaticallyCheckBox.Value = 0;
+                            app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 0;
+                            app.validfootstrikeeventsLabel.Visible = "off";
+                            app.forceplatecontactsLabel.Visible = "on";
                         end
                     end
                 else
@@ -465,6 +439,9 @@ classdef processC3D_exported < matlab.apps.AppBase
                 else
                     xminlimit = 0;
                     xmaxlimit = 5000;
+                end
+                if xminlimit == xmaxlimit
+                    xmaxlimit = xminlimit + 5000;
                 end
                 xlim(app.UIAxesSteps, [xminlimit xmaxlimit]);
                 ylim(app.UIAxesSteps, [-1.1 1.1]);
@@ -838,7 +815,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                         counter = counter + 1;
                     end
                     for i = 1 : size(app.leftStepForcePlateAssignment, 1)
-                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(7 + app.leftStepForcePlateAssignment(i, 2));
+                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.leftStepForcePlateAssignment(i, 2));
                         counter = counter + 1;
                     end
                     Pref = struct;
@@ -854,7 +831,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                     end
 
                     for i = 1 : size(app.leftListBox.Value, 1)
-                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(str2double(app.leftListBox.Value{i}(end)) + 7);
+                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(str2double(app.leftListBox.Value{i}(end)) + 9);
                         counter = counter + 1;
                     end
 
@@ -914,7 +891,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                             channels = fieldnames(app.EMG_lowPass);
                             channels = sort(channels);
                             channels = channels(~strcmp(channels, 'time'));
-                            emgLabels = readtable(app.emgLabelCSVPath, 'Delimiter', ',');
+                            emgLabels = readtable(app.emgLabelCSVPath);
                             for i = 1 : size(channels, 1)
                                 originalLabel = table2cell(emgLabels(i, 1));
                                 newLabel = table2cell(emgLabels(i, 2));
@@ -1554,6 +1531,12 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.cutofffrequencySpinner_Marker.Limits = [4 30];
             app.cutofffrequencySpinner_Marker.Position = [396 551 53 22];
             app.cutofffrequencySpinner_Marker.Value = 5;
+
+            % Create normalizeEMGCheckBox
+            app.normalizeEMGCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
+            app.normalizeEMGCheckBox.Text = 'normalize EMG';
+            app.normalizeEMGCheckBox.Position = [461 521 105 22];
+            app.normalizeEMGCheckBox.Value = true;
 
             % Show the figure after all components are created
             app.PrepareC3DfileUIFigure.Visible = 'on';
