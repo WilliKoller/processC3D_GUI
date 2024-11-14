@@ -85,11 +85,11 @@ function DOMnode = xml_write(filename, tree, RootName, Pref)
 % Written by Jarek Tuszynski, SAIC, jaroslaw.w.tuszynski_at_saic.com
 
 %% Check Matlab Version
-v = ver('MATLAB');
-v = str2double(regexp(v.Version, '\d.\d','match','once'));
-if (v<7)
-  error('Your MATLAB version is too old. You need version 7.0 or newer.');
-end
+% v = ver('MATLAB');
+% v = str2double(regexp(v.Version, '\d.\d','match','once'));
+% if (v<7)
+%   error('Your MATLAB version is too old. You need version 7.0 or newer.');
+% end
 
 %% default preferences
 DPref.TableName  = {'tr','td'}; % name of a special tags used to itemize 2D cell arrays
