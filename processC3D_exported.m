@@ -3,6 +3,8 @@ classdef processC3D_exported < matlab.apps.AppBase
     % Properties that correspond to app components
     properties (Access = public)
         PrepareC3DfileUIFigure          matlab.ui.Figure
+        mirrorCheckBox                  matlab.ui.control.CheckBox
+        invertforcesensorsCheckBox      matlab.ui.control.CheckBox
         normalizeEMGCheckBox            matlab.ui.control.CheckBox
         cutofffrequencySpinner_Marker   matlab.ui.control.Spinner
         cutofffrequencySpinner_2Label   matlab.ui.control.Label
@@ -103,7 +105,7 @@ classdef processC3D_exported < matlab.apps.AppBase
         function updateCyclePlot(app)
             cla(app.UIAxesSteps);
 
-            if app.c3d.getNumForces() > 0
+            if ~isempty(app.c3d) && app.c3d.getNumForces() > 0
                 selectedLeft = app.leftListBox.Value;
                 for i = 1 : size(app.leftFootStrikeList, 2) - 1
                     footOffFrame = app.leftFootOffList( find( app.leftFootOffList > str2double(app.leftFootStrikeList{i}), 1 ) );
@@ -197,9 +199,9 @@ classdef processC3D_exported < matlab.apps.AppBase
             end
         end
 
-        function filterGRFs(app)
-            threshold = 30;
-            timeThresholdFPs = 30;
+         function filterGRFs(app)
+            threshold = 20;
+            timeThresholdFPs = 10;
             if app.filterGRFsCheckBox.Value && app.c3d.getNumForces() > 0
                 app.grf_forces_adjusted = [];
                 Fs = app.forceFrequency;  % Sampling Frequency
@@ -217,16 +219,11 @@ classdef processC3D_exported < matlab.apps.AppBase
                         app.grf_forces_adjusted.(char(forcesFields(i))) = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(char(forcesFields(i))));
                         if app.setGRFstozerooutsideregionoffootcontactCheckBox.Value == 1
                             firstIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})) > threshold, 1);
-                            %                         lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 50 : end)) < threshold, 1) + firstIndexOverThreshold + 50;
-                            lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 100 : end)) < threshold, 1) + firstIndexOverThreshold + 100;
-                            
-%                             lastIndexOverThreshold = length(app.grf_forces_zero_leveled.(fieldForThreshold{1})) - find(flip(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1}))) > threshold, 1) + 1;
-                            app.grf_forces_adjusted.(char(forcesFields(i)))(1 : firstIndexOverThreshold - timeThresholdFPs/2) = 0;
-                            app.grf_forces_adjusted.(char(forcesFields(i)))(lastIndexOverThreshold + timeThresholdFPs/2 : end) = 0;
+                            lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 100 : end)) < threshold, 1) + firstIndexOverThreshold + 99;
+                            app.grf_forces_adjusted.(char(forcesFields(i)))(1 : firstIndexOverThreshold-1) = 0;
+                            app.grf_forces_adjusted.(char(forcesFields(i)))(lastIndexOverThreshold : end) = 0;
                         end
-                        %                        app.grf_forces_adjusted.(char(forcesFields(i)))(app.grf_forces_adjusted.(char(forcesFields(i))) < 0) = 0;
-                    else
-                        % do not filter time and application point
+                    else % other filtering for point of application 
                         if contains(forcesFields(i), '_p') && app.setGRFstozerooutsideregionoffootcontactCheckBox.Value == 1
                             fieldForThreshold = strrep(forcesFields(i), '_moment', '_force');
                             fieldForThreshold{1}(end) = 'y';
@@ -234,8 +231,6 @@ classdef processC3D_exported < matlab.apps.AppBase
                             firstIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})) > threshold, 1);
 
                             lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 100 : end)) < threshold, 1) + firstIndexOverThreshold + 100;
-                            %                         lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 50 : end)) < threshold, 1) + firstIndexOverThreshold + 50;
-%                             lastIndexOverThreshold = length(app.grf_forces_zero_leveled.(fieldForThreshold{1})) - find(flip(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1}))) > threshold, 1) + 1;
                             tmp_maxTimeThresholdStart = min(timeThresholdFPs, firstIndexOverThreshold);
                             tmp_step = app.grf_forces_zero_leveled.(char(forcesFields(i)))(firstIndexOverThreshold + tmp_maxTimeThresholdStart : lastIndexOverThreshold - timeThresholdFPs);
                             tmp_step_filtered = filtfilt(filter_b, filter_a, tmp_step);
@@ -244,48 +239,16 @@ classdef processC3D_exported < matlab.apps.AppBase
                                 if lastIndexOverThreshold >= size(app.grf_forces_zero_leveled.(fieldForThreshold{1}), 1)
                                     tmp_interpolated = tmp_interpolated(1 : end - 30);
                                 end
-%                                 app.grf_forces_adjusted.(char(forcesFields(i))) = [app.grf_forces_zero_leveled.(char(forcesFields(i)))(1 : firstIndexOverThreshold - tmp_maxTimeThresholdStart)', tmp_interpolated, app.grf_forces_zero_leveled.(char(forcesFields(i)))(lastIndexOverThreshold + timeThresholdFPs + 1 : end)']';
-                                app.grf_forces_adjusted.(char(forcesFields(i))) = [zeros(1, firstIndexOverThreshold - tmp_maxTimeThresholdStart), tmp_interpolated, zeros(1, length(app.grf_forces_zero_leveled.(char(forcesFields(i)))) - lastIndexOverThreshold - timeThresholdFPs)]';
+                            app.grf_forces_adjusted.(char(forcesFields(i))) = [zeros(1, firstIndexOverThreshold - tmp_maxTimeThresholdStart), tmp_interpolated, zeros(1, length(app.grf_forces_zero_leveled.(char(forcesFields(i)))) - lastIndexOverThreshold - timeThresholdFPs)]';
                             else
                                 app.grf_forces_adjusted.(char(forcesFields(i))) = app.grf_forces_zero_leveled.(char(forcesFields(i)));
                             end
                         else
+                            % do not filter time
                             app.grf_forces_adjusted.(char(forcesFields(i))) = app.grf_forces_zero_leveled.(char(forcesFields(i)));
                         end
                     end
                 end
-
-
-                %                 % after filtering set outside of foot contact to zero again
-                %                 footStrikes = str2double(app.leftListBox.Value);
-                %                 for i = 1 : size(app.leftStepForcePlateAssignment, 1)
-                %                     forcesFieldsOfThisFP = forcesFields(contains(forcesFields, num2str(app.leftStepForcePlateAssignment(i, 2))));
-                %                     forcesFieldsOfThisFP = forcesFieldsOfThisFP(~contains(forcesFieldsOfThisFP, '_p'));
-                %                     for j = 1 : numel(forcesFieldsOfThisFP)
-                %                         nextStrike = footStrikes( find( footStrikes > app.leftStepForcePlateAssignment(i, 1), 1 ) );
-                %                         nextStrike = nextStrike / app.frequency_ * app.forceFrequency - app.forceOffset;
-                %                         app.grf_forces_adjusted.(char(forcesFieldsOfThisFP(j))) = app.grf_forces_adjusted.(char(forcesFieldsOfThisFP(j)));
-                %                         footStrikeIndex = app.leftStepForcePlateAssignment(i, 1) / app.frequency_ * app.forceFrequency - app.forceOffset;
-                %
-                %                         app.grf_forces_adjusted.(char(forcesFieldsOfThisFP(j)))(1 : footStrikeIndex) = 0;
-                %                         app.grf_forces_adjusted.(char(forcesFieldsOfThisFP(j)))(nextStrike : end) = 0;
-                %                     end
-                %                 end
-                %
-                %                 footStrikes = str2double(app.rightListBox.Value);
-                %                 for i = 1 : size(app.rightStepForcePlateAssignment, 1)
-                %                     forcesFieldsOfThisFP = forcesFields(contains(forcesFields, num2str(app.rightStepForcePlateAssignment(i, 2))));
-                %                     forcesFieldsOfThisFP = forcesFieldsOfThisFP(~contains(forcesFieldsOfThisFP, '_p'));
-                %                     for j = 1 : numel(forcesFieldsOfThisFP)
-                %                         nextStrike = footStrikes( find( footStrikes > app.rightStepForcePlateAssignment(i, 1), 1 ) );
-                %                         nextStrike = nextStrike / app.frequency_ * app.forceFrequency - app.forceOffset;
-                %                         app.grf_forces_adjusted.(char(forcesFieldsOfThisFP(j))) = app.grf_forces_adjusted.(char(forcesFieldsOfThisFP(j)));
-                %                         footStrikeIndex = app.rightStepForcePlateAssignment(i, 1) / app.frequency_ * app.forceFrequency - app.forceOffset;
-                %
-                %                         app.grf_forces_adjusted.(char(forcesFieldsOfThisFP(j)))(1 : footStrikeIndex) = 0;
-                %                         app.grf_forces_adjusted.(char(forcesFieldsOfThisFP(j)))(nextStrike : end) = 0;
-                %                     end
-                %                 end
             else
                 app.grf_forces_adjusted = app.grf_forces_zero_leveled;
             end
@@ -299,31 +262,33 @@ classdef processC3D_exported < matlab.apps.AppBase
 
         function readEMG(app)
             app.EMG = struct;
-            [analogs, analogsInfo] = btkGetAnalogs(app.acq);
-            ratioEmgToFrames = btkGetAnalogSampleNumberPerFrame(app.acq);
-            app.EMG.frequency = btkGetAnalogFrequency(app.acq);
-            analogChannels = fieldnames(analogsInfo.units);
-            for i = 1 : numel(analogChannels)
-                if contains(analogsInfo.description.(analogChannels{i}), 'EMG')
-                    app.EMG.(analogChannels{i}) = analogs.(analogChannels{i});
+            if ~isempty(app.acq)
+                [analogs, analogsInfo] = btkGetAnalogs(app.acq);
+                ratioEmgToFrames = btkGetAnalogSampleNumberPerFrame(app.acq);
+                app.EMG.frequency = btkGetAnalogFrequency(app.acq);
+                analogChannels = fieldnames(analogsInfo.units);
+                for i = 1 : numel(analogChannels)
+                    if contains(analogsInfo.description.(analogChannels{i}), 'EMG')
+                        app.EMG.(analogChannels{i}) = analogs.(analogChannels{i});
+                    end
                 end
-            end
 
-            emgFields = fieldnames(app.EMG);
-            emgFields = emgFields(~contains(emgFields, 'frequency'));
-            if size(emgFields, 1) ~= 0
-                try
-                    app.EMG.time(1) = app.markers.time(1);
-                catch
-                    app.EMG.time(1) = 0;
+                emgFields = fieldnames(app.EMG);
+                emgFields = emgFields(~contains(emgFields, 'frequency'));
+                if size(emgFields, 1) ~= 0
+                    try
+                        app.EMG.time(1) = app.markers.time(1);
+                    catch
+                        app.EMG.time(1) = 0;
+                    end
+                    for j = 2 : size(app.EMG.(emgFields{1}), 1)
+                        app.EMG.time(j) = app.EMG.time(j-1) + 1/app.EMG.frequency;
+                    end
+                    app.EMG.time = app.EMG.time';
+                else
+                    app.filterEMGandexporttostoCheckBox.Value = 0;
+                    app.renameEMGlabelsCheckBox.Value = 0;
                 end
-                for j = 2 : size(app.EMG.(emgFields{1}), 1)
-                    app.EMG.time(j) = app.EMG.time(j-1) + 1/app.EMG.frequency;
-                end
-                app.EMG.time = app.EMG.time';
-            else
-                app.filterEMGandexporttostoCheckBox.Value = 0;
-                app.renameEMGlabelsCheckBox.Value = 0;
             end
         end
 
@@ -565,6 +530,66 @@ classdef processC3D_exported < matlab.apps.AppBase
                 app.openselectedfilewithdefaultprogramButton.Visible = 0;
             end
         end
+        
+        function mirrorMarkerData(app, filename)
+            disp('mirroring marker data...')
+            d.Message = 'mirroring marker data...';
+            
+            text = fileread(filename);
+            lines = strsplit(text, '\n');
+            data = [];
+            for i = 1 : numel(lines)
+                data{i} = strsplit(lines{i}, '\t', 'CollapseDelimiters', false);
+            end
+
+            for col = 3 : numel(data{7}) % skip time and Frame
+                traj = [];
+                for row = 7 : numel(data)-1 % skip 6 header rows
+                    traj(row-6) = str2double(data{row}{col});
+                end
+                if sum(isnan(traj)) == 0
+                    if contains(data{5}{col}, 'Z')
+                        traj = traj * - 1;
+                    end
+                    % filteredTraj = filtfilt(filter_b, filter_a, traj);
+                    for row = 7 : numel(data)-1 % skip 6 header rows
+                        data{row}{col} = traj(row-6);
+                        % traj(row-6) = cell2mat();
+                    end
+                end
+                if ~isempty(data{4}{col}) && strcmp(data{4}{col}(1), 'L')
+                    data{4}{col}(1) = 'R';
+                elseif ~isempty(data{4}{col}) && strcmp(data{4}{col}(1), 'R')
+                    data{4}{col}(1) = 'L';
+                end
+            end
+
+
+            data{1}{4} = strrep(data{1}{4}, '\', '\\');
+
+            finalStr = '';
+            for row = 1 : numel(data)-1
+                rowStr = '';
+                for col = 1 : numel(data{row})
+                    try rowStr = [rowStr, num2str(data{row}{col}), '\t'];
+                    catch rowStr = [rowStr, data{row}{col}, '\t'];
+                    end
+                end
+                if ~isempty(rowStr)
+                    rowStr(end-2 : end) = [];
+                    rowStr = [rowStr, '\n'];
+                else
+                    rowStr = '\n';
+                end
+
+                finalStr = [finalStr, rowStr];
+            end
+
+
+            fid = fopen(filename,'wt');
+            fprintf(fid, finalStr);
+            fclose(fid);
+        end
     end
 
 
@@ -665,6 +690,10 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                 output_folder = fullfile(folder, baseFileNameNoExt);
 
+                if app.mirrorCheckBox.Value
+                    output_folder = [output_folder '_mirrored'];
+                end
+
                 % create folder with the same name as c3d file
                 if ~exist(output_folder, 'dir')
                     mkdir(output_folder)
@@ -675,10 +704,11 @@ classdef processC3D_exported < matlab.apps.AppBase
                 if ~app.detectwalkingdirectionautomaticallybymarkerCheckBox.Value
                     app.rotationAngle = str2double(strrep(app.rotatearoundyaxisDropDown.Value, '°', ''));
                 end
-                app.c3d.rotateData('y', app.rotationAngle);
+                c3d_tmp = app.c3d;
+                c3d_tmp.rotateData('y', app.rotationAngle);
                 d.Value = d.Value + 0.1;
                 d.Message = 'writing marker_experimental.trc file with marker locations...';
-                app.c3d.writeTRC(fullfile(output_folder, 'marker_experimental.trc'));
+                c3d_tmp.writeTRC(fullfile(output_folder, 'marker_experimental.trc'));
 
                 if app.filtermarkersCheckBox.Value
                     disp('filtering marker data...')
@@ -759,6 +789,11 @@ classdef processC3D_exported < matlab.apps.AppBase
                     fclose(fid);
                 end
 
+
+                if app.mirrorCheckBox.Value
+                    mirrorMarkerData(app, fullfile(output_folder, 'marker_experimental.trc'));
+                end
+
                 nForces = app.c3d.getNumForces();
 
                 d.Value = d.Value + 0.1;
@@ -790,13 +825,27 @@ classdef processC3D_exported < matlab.apps.AppBase
                         fpNr = allFields{i * 6, 1}(14);
                         temp_forceStruct.(['ground_force_' num2str(fpNr) '_vx']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_vx']);
                         temp_forceStruct.(['ground_force_' num2str(fpNr) '_vy']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_vy']);
-                        temp_forceStruct.(['ground_force_' num2str(fpNr) '_vz']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_vz']);
+
+                        if app.mirrorCheckBox.Value
+                            temp_forceStruct.(['ground_force_' num2str(fpNr) '_vz']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_vz']) * -1;
+                        else
+                            temp_forceStruct.(['ground_force_' num2str(fpNr) '_vz']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_vz']);
+                        end
                         temp_forceStruct.(['ground_force_' num2str(fpNr) '_px']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_px']);
                         temp_forceStruct.(['ground_force_' num2str(fpNr) '_py']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_py']);
-                        temp_forceStruct.(['ground_force_' num2str(fpNr) '_pz']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_pz']);
+                        if app.mirrorCheckBox.Value
+                            temp_forceStruct.(['ground_force_' num2str(fpNr) '_pz']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_pz']) * -1;
+                        else
+                            temp_forceStruct.(['ground_force_' num2str(fpNr) '_pz']) = app.grf_forces_adjusted.(['ground_force_' num2str(fpNr) '_pz']);
+                        end
                         temp_forceStruct.(['ground_moment_' num2str(fpNr) '_mx']) = app.grf_forces_adjusted.(['ground_moment_' num2str(fpNr) '_mx']);
                         temp_forceStruct.(['ground_moment_' num2str(fpNr) '_my']) = app.grf_forces_adjusted.(['ground_moment_' num2str(fpNr) '_my']);
-                        temp_forceStruct.(['ground_moment_' num2str(fpNr) '_mz']) = app.grf_forces_adjusted.(['ground_moment_' num2str(fpNr) '_mz']);
+
+                        if app.mirrorCheckBox.Value
+                            temp_forceStruct.(['ground_moment_' num2str(fpNr) '_mz']) = app.grf_forces_adjusted.(['ground_moment_' num2str(fpNr) '_mz']) * -1;
+                        else
+                            temp_forceStruct.(['ground_moment_' num2str(fpNr) '_mz']) = app.grf_forces_adjusted.(['ground_moment_' num2str(fpNr) '_mz']);
+                        end
                     end
                     app.grf_forces_adjusted = temp_forceStruct;
 
@@ -810,13 +859,24 @@ classdef processC3D_exported < matlab.apps.AppBase
                 grforces_generated = xml_read('GRF_file_empty.xml');
                 counter = 1;
                 if app.Ignorec3deventsCheckBox.Value == 0
-                    for i = 1 : size(app.rightStepForcePlateAssignment, 1)
-                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.rightStepForcePlateAssignment(i, 2));
-                        counter = counter + 1;
-                    end
-                    for i = 1 : size(app.leftStepForcePlateAssignment, 1)
-                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.leftStepForcePlateAssignment(i, 2));
-                        counter = counter + 1;
+                    if ~app.mirrorCheckBox.Value
+                        for i = 1 : size(app.rightStepForcePlateAssignment, 1)
+                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.rightStepForcePlateAssignment(i, 2));
+                            counter = counter + 1;
+                        end
+                        for i = 1 : size(app.leftStepForcePlateAssignment, 1)
+                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.leftStepForcePlateAssignment(i, 2));
+                            counter = counter + 1;
+                        end
+                    else
+                        for i = 1 : size(app.rightStepForcePlateAssignment, 1)
+                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.rightStepForcePlateAssignment(i, 2));
+                            counter = counter + 1;
+                        end
+                        for i = 1 : size(app.leftStepForcePlateAssignment, 1)
+                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.leftStepForcePlateAssignment(i, 2));
+                            counter = counter + 1;
+                        end
                     end
                     Pref = struct;
                     Pref.StructItem = false;
@@ -868,6 +928,17 @@ classdef processC3D_exported < matlab.apps.AppBase
                             if ~isempty(app.rightFootOffList)
                                 cycle.right.footOff(i) = app.rightFootOffList( find( app.rightFootOffList > cycle.right.start(i) + app.firstFrame_, 1 ) ) - app.firstFrame_;
                             end
+                        end
+                    end
+
+                    cycle_tmp = cycle;
+                    cycle = struct;
+                    if app.mirrorCheckBox.Value
+                        if isfield(cycle_tmp, 'right')
+                            cycle.left = cycle_tmp.right;
+                        end
+                        if isfield(cycle_tmp, 'left')
+                            cycle.right = cycle_tmp.left;
                         end
                     end
                 end
@@ -936,21 +1007,48 @@ classdef processC3D_exported < matlab.apps.AppBase
                     
                     tmp_fields = fieldnames(app.EMG);
                     forces.time = app.EMG.time;
+                    
                     forces.ground_force_1_vx = zeros(length(forces.time), 1);
-                    forces.ground_force_1_vy = app.EMG.(tmp_fields{contains(tmp_fields, 'Fz_left')});
-                    forces.ground_force_1_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_left')});
-                    forces.ground_force_1_px = interp1(1:markerLength, cell2mat(marker.LFIN_X) / 1000, linspace(1,markerLength,forceLength))';
-                    forces.ground_force_1_py = interp1(1:markerLength, cell2mat(marker.LFIN_Y) / 1000, linspace(1,markerLength,forceLength))';
-                    forces.ground_force_1_pz = interp1(1:markerLength, cell2mat(marker.LFIN_Z) / 1000, linspace(1,markerLength,forceLength))';
+                    if xor(app.invertforcesensorsCheckBox.Value, app.mirrorCheckBox.Value)
+                        forces.ground_force_1_vy = app.EMG.(tmp_fields{contains(tmp_fields, 'Fz_right')});
+                        if app.mirrorCheckBox.Value
+                            forces.ground_force_1_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_right')});
+                        else
+                            forces.ground_force_1_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_right')}) * -1;
+                        end
+                    else
+                        forces.ground_force_1_vy = app.EMG.(tmp_fields{contains(tmp_fields, 'Fz_left')});
+                        if app.mirrorCheckBox.Value
+                            forces.ground_force_1_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_left')});
+                        else
+                            forces.ground_force_1_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_left')}) * -1;
+                        end
+                    end
+                    forces.ground_force_1_px = interp1(1:markerLength, cell2mat(marker.LFIN_X), linspace(1,markerLength,forceLength))';
+                    forces.ground_force_1_py = interp1(1:markerLength, cell2mat(marker.LFIN_Y), linspace(1,markerLength,forceLength))';
+                    forces.ground_force_1_pz = interp1(1:markerLength, cell2mat(marker.LFIN_Z), linspace(1,markerLength,forceLength))';
                     forces.ground_moment_1_mx = zeros(length(forces.time), 1);
                     forces.ground_moment_1_my = zeros(length(forces.time), 1);
                     forces.ground_moment_1_mz = zeros(length(forces.time), 1);
                     forces.ground_force_2_vx = zeros(length(forces.time), 1);
-                    forces.ground_force_2_vy = app.EMG.(tmp_fields{contains(tmp_fields, 'Fz_right')});
-                    forces.ground_force_2_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_right')});
-                    forces.ground_force_2_px = interp1(1:markerLength, cell2mat(marker.RFIN_X) / 1000, linspace(1,markerLength,forceLength))';
-                    forces.ground_force_2_py = interp1(1:markerLength, cell2mat(marker.RFIN_Y) / 1000, linspace(1,markerLength,forceLength))';
-                    forces.ground_force_2_pz = interp1(1:markerLength, cell2mat(marker.RFIN_Z) / 1000, linspace(1,markerLength,forceLength))';
+                    if xor(app.invertforcesensorsCheckBox.Value, app.mirrorCheckBox.Value)
+                        forces.ground_force_2_vy = app.EMG.(tmp_fields{contains(tmp_fields, 'Fz_left')});
+                        if app.mirrorCheckBox.Value
+                            forces.ground_force_2_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_left')});
+                        else
+                            forces.ground_force_2_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_left')}) * -1;
+                        end
+                    else
+                        forces.ground_force_2_vy = app.EMG.(tmp_fields{contains(tmp_fields, 'Fz_right')});
+                        if app.mirrorCheckBox.Value
+                            forces.ground_force_2_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_right')});
+                        else
+                            forces.ground_force_2_vz = app.EMG.(tmp_fields{contains(tmp_fields, 'Fy_right')}) * -1;
+                        end
+                    end
+                    forces.ground_force_2_px = interp1(1:markerLength, cell2mat(marker.RFIN_X), linspace(1,markerLength,forceLength))';
+                    forces.ground_force_2_py = interp1(1:markerLength, cell2mat(marker.RFIN_Y), linspace(1,markerLength,forceLength))';
+                    forces.ground_force_2_pz = interp1(1:markerLength, cell2mat(marker.RFIN_Z), linspace(1,markerLength,forceLength))';
                     forces.ground_moment_2_mx = zeros(length(forces.time), 1);
                     forces.ground_moment_2_my = zeros(length(forces.time), 1);
                     forces.ground_moment_2_mz = zeros(length(forces.time), 1);
@@ -1048,7 +1146,7 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                         for i = 1 : size(app.leftListBox.Value, 2)
                             % find closest forceplate to heel marker
-                            heelLocation = temp_markers.(app.detectFPbyMarker.Value)(str2double(app.leftListBox.Value{i}) - app.firstFrame_ + 20, :);
+                            heelLocation = temp_markers.(app.detectFPbyMarker.Value)(str2double(app.leftListBox.Value{i}) - app.firstFrame_ + 20, :) * 1000;
                             isset = 0;
                             for j = 1 : size(forceplates, 1)
                                 fpXlimits = sort(forceplates(j).corners(1, :));
@@ -1071,7 +1169,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                                 rightMarkerName = app.detectFPbyMarker.Value;
                             end
                             % find closest forceplate to heel marker
-                            heelLocation = temp_markers.(rightMarkerName)(str2double(app.rightListBox.Value{i}) - app.firstFrame_ + 20, :);
+                            heelLocation = temp_markers.(rightMarkerName)(str2double(app.rightListBox.Value{i}) - app.firstFrame_ + 20, :) * 1000;
                             isset = 0;
                             for j = 1 : size(forceplates, 1)
                                 fpXlimits = sort(forceplates(j).corners(1, :));
@@ -1110,7 +1208,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                 app.setGRFstozerooutsideregionoffootcontactCheckBox.Enable = "off";
                 app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 0;
 
-                if app.c3d.getNumForces() ~= 0
+                if ~isempty(app.c3d) && app.c3d.getNumForces() ~= 0
                     setGRFstozerooutsideregionoffootcontactCheckBoxValueChanged(app, 0);
                 end
             end
@@ -1263,11 +1361,8 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.UIAxesSteps = uiaxes(app.PrepareC3DfileUIFigure);
             title(app.UIAxesSteps, 'Steps')
             ylabel(app.UIAxesSteps, '\color{red}left \color{black} and \color{green} right \color{black} cycles')
-            app.UIAxesSteps.XTickLabelRotation = 0;
             app.UIAxesSteps.YTick = [-1 -0.5 0 0.5 1];
-            app.UIAxesSteps.YTickLabelRotation = 0;
             app.UIAxesSteps.YTickLabel = {'-1'; '-0.5'; '0'; '0.5'; '1'};
-            app.UIAxesSteps.ZTickLabelRotation = 0;
             app.UIAxesSteps.Position = [15 329 1269 158];
 
             % Create UIAxesGRFs
@@ -1275,9 +1370,6 @@ classdef processC3D_exported < matlab.apps.AppBase
             title(app.UIAxesGRFs, 'GRFs')
             xlabel(app.UIAxesGRFs, 'frame')
             ylabel(app.UIAxesGRFs, '[N]')
-            app.UIAxesGRFs.XTickLabelRotation = 0;
-            app.UIAxesGRFs.YTickLabelRotation = 0;
-            app.UIAxesGRFs.ZTickLabelRotation = 0;
             app.UIAxesGRFs.YGrid = 'on';
             app.UIAxesGRFs.Position = [15 26 1269 304];
 
@@ -1500,7 +1592,7 @@ classdef processC3D_exported < matlab.apps.AppBase
             % Create ClimbingCheckBox
             app.ClimbingCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.ClimbingCheckBox.Text = 'Climbing';
-            app.ClimbingCheckBox.Position = [324 678 69 22];
+            app.ClimbingCheckBox.Position = [277 678 69 22];
 
             % Create filtermarkersCheckBox
             app.filtermarkersCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
@@ -1537,6 +1629,17 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.normalizeEMGCheckBox.Text = 'normalize EMG';
             app.normalizeEMGCheckBox.Position = [461 521 105 22];
             app.normalizeEMGCheckBox.Value = true;
+
+            % Create invertforcesensorsCheckBox
+            app.invertforcesensorsCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
+            app.invertforcesensorsCheckBox.Text = 'invert force sensors';
+            app.invertforcesensorsCheckBox.Position = [360 678 126 22];
+
+            % Create mirrorCheckBox
+            app.mirrorCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
+            app.mirrorCheckBox.Tooltip = {'EMG stays the same!'};
+            app.mirrorCheckBox.Text = 'mirror';
+            app.mirrorCheckBox.Position = [491 678 53 22];
 
             % Show the figure after all components are created
             app.PrepareC3DfileUIFigure.Visible = 'on';

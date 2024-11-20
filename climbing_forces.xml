@@ -4,7 +4,7 @@
 		<objects>
 			<ExternalForce name="force_left">
 				<!--Name of the body the force is applied to.-->
-				<applied_to_body>finger_l</applied_to_body>
+				<applied_to_body>hand_L</applied_to_body>
 				<!--Name of the body the force is expressed in (default is ground).-->
 				<force_expressed_in_body>ground</force_expressed_in_body>
 				<!--Name of the body the point is expressed in (default is ground).-->
@@ -20,7 +20,7 @@
 			</ExternalForce>
 			<ExternalForce name="force_right">
 				<!--Name of the body the force is applied to.-->
-				<applied_to_body>finger_r</applied_to_body>
+				<applied_to_body>hand_R</applied_to_body>
 				<!--Name of the body the force is expressed in (default is ground).-->
 				<force_expressed_in_body>ground</force_expressed_in_body>
 				<!--Name of the body the point is expressed in (default is ground).-->
