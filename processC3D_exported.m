@@ -3,6 +3,7 @@ classdef processC3D_exported < matlab.apps.AppBase
     % Properties that correspond to app components
     properties (Access = public)
         PrepareC3DfileUIFigure          matlab.ui.Figure
+        AMTITandemTreadmillCheckBox     matlab.ui.control.CheckBox
         mirrorCheckBox                  matlab.ui.control.CheckBox
         invertforcesensorsCheckBox      matlab.ui.control.CheckBox
         normalizeEMGCheckBox            matlab.ui.control.CheckBox
@@ -20,7 +21,7 @@ classdef processC3D_exported < matlab.apps.AppBase
         createCSVandopenButton          matlab.ui.control.Button
         SelectexistingCSVButton         matlab.ui.control.Button
         filterEMGandexporttostoCheckBox  matlab.ui.control.CheckBox
-        v16Label                        matlab.ui.control.Label
+        v17Label                        matlab.ui.control.Label
         detectFPbyMarker                matlab.ui.control.EditField
         detectWalkingByMarker           matlab.ui.control.EditField
         cutofffrequencySpinner          matlab.ui.control.Spinner
@@ -39,7 +40,7 @@ classdef processC3D_exported < matlab.apps.AppBase
         rotatearoundyaxisDropDown       matlab.ui.control.DropDown
         rotatearoundyaxisDropDownLabel  matlab.ui.control.Label
         detectwalkingdirectionautomaticallybymarkerCheckBox  matlab.ui.control.CheckBox
-        setGRFstozerooutsideregionoffootcontactCheckBox  matlab.ui.control.CheckBox
+        doPostZeroLevellingCheckBox     matlab.ui.control.CheckBox
         filterGRFsCheckBox              matlab.ui.control.CheckBox
         detectforceplatesautomaticallyCheckBox  matlab.ui.control.CheckBox
         SelectaC3DfileLabel             matlab.ui.control.Label
@@ -64,7 +65,7 @@ classdef processC3D_exported < matlab.apps.AppBase
     % work. If not, see <http://creativecommons.org/licenses/by-nc/4.0/>.
     % This package uses the btk toolbox
     % http://biomechanical-toolkit.github.io/docs/Wrapping/Matlab/_tutorial.html
-    
+
 
     properties (Access = public)
         c3dFileName % Description
@@ -145,7 +146,7 @@ classdef processC3D_exported < matlab.apps.AppBase
 
             % Nested function - indexes app property "states" using input argument "s"
             function fillCallback(src,event, app)
-                disp('clicked')
+                % disp('clicked')
                 src.Vertices(1, 1);
                 src.Vertices(4, 1);
                 if src.Vertices(2, 2) > 0 % left
@@ -199,9 +200,13 @@ classdef processC3D_exported < matlab.apps.AppBase
             end
         end
 
-         function filterGRFs(app)
+        function filterGRFs(app)
+
             threshold = 20;
             timeThresholdFPs = 10;
+            if app.AMTITandemTreadmillCheckBox.Value == 1
+                timeThresholdFPs = 5;
+            end
             if app.filterGRFsCheckBox.Value && app.c3d.getNumForces() > 0
                 app.grf_forces_adjusted = [];
                 Fs = app.forceFrequency;  % Sampling Frequency
@@ -211,47 +216,252 @@ classdef processC3D_exported < matlab.apps.AppBase
                 forcesFields = fieldnames(app.grf_forces_zero_leveled);
 
                 forcesFields = sort(forcesFields);
+                fpNumbers = [];
                 for i = 1 : numel(forcesFields)
-                    if char(forcesFields(i)) ~= "time" && ~contains(forcesFields(i), '_p')
-                        fieldForThreshold = strrep(forcesFields(i), '_moment', '_force');
-                        fieldForThreshold{1}(end) = 'y';
-                        fieldForThreshold{1}(end-1) = 'v';
-                        app.grf_forces_adjusted.(char(forcesFields(i))) = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(char(forcesFields(i))));
-                        if app.setGRFstozerooutsideregionoffootcontactCheckBox.Value == 1
-                            firstIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})) > threshold, 1);
-                            lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 100 : end)) < threshold, 1) + firstIndexOverThreshold + 99;
-                            app.grf_forces_adjusted.(char(forcesFields(i)))(1 : firstIndexOverThreshold-1) = 0;
-                            app.grf_forces_adjusted.(char(forcesFields(i)))(lastIndexOverThreshold : end) = 0;
-                        end
-                    else % other filtering for point of application 
-                        if contains(forcesFields(i), '_p') && app.setGRFstozerooutsideregionoffootcontactCheckBox.Value == 1
-                            fieldForThreshold = strrep(forcesFields(i), '_moment', '_force');
-                            fieldForThreshold{1}(end) = 'y';
-                            fieldForThreshold{1}(end-1) = 'v';
-                            firstIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})) > threshold, 1);
+                    if char(forcesFields(i)) ~= "time"
+                        numbers = regexp(forcesFields{i}, '\d+\.?\d*', 'match'); % Extract numbers as cell array
+                        fpNumbers(end+1) = str2double(numbers);
+                    end
+                end
+                fpNumbersUnique = unique(fpNumbers);
 
-                            lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 100 : end)) < threshold, 1) + firstIndexOverThreshold + 100;
-                            tmp_maxTimeThresholdStart = min(timeThresholdFPs, firstIndexOverThreshold);
-                            tmp_step = app.grf_forces_zero_leveled.(char(forcesFields(i)))(firstIndexOverThreshold + tmp_maxTimeThresholdStart : lastIndexOverThreshold - timeThresholdFPs);
-                            tmp_step_filtered = filtfilt(filter_b, filter_a, tmp_step);
-                            if size(tmp_step_filtered, 1) > 1
-                                tmp_interpolated = interp1(1 : size(tmp_step_filtered, 1), tmp_step_filtered, linspace(1, size(tmp_step_filtered, 1), lastIndexOverThreshold - firstIndexOverThreshold + tmp_maxTimeThresholdStart + timeThresholdFPs));
-                                if lastIndexOverThreshold >= size(app.grf_forces_zero_leveled.(fieldForThreshold{1}), 1)
-                                    tmp_interpolated = tmp_interpolated(1 : end - 30);
-                                end
-                            app.grf_forces_adjusted.(char(forcesFields(i))) = [zeros(1, firstIndexOverThreshold - tmp_maxTimeThresholdStart), tmp_interpolated, zeros(1, length(app.grf_forces_zero_leveled.(char(forcesFields(i)))) - lastIndexOverThreshold - timeThresholdFPs)]';
-                            else
-                                app.grf_forces_adjusted.(char(forcesFields(i))) = app.grf_forces_zero_leveled.(char(forcesFields(i)));
+                app.grf_forces_adjusted.time = app.grf_forces_zero_leveled.time;
+
+                for i = 1 : numel(fpNumbersUnique)
+                    fieldsIdxOfThisPlate = fpNumbers==fpNumbersUnique(i);
+                    fieldsOfThisPlate = forcesFields(fieldsIdxOfThisPlate);
+                    for f = 1 : numel(fieldsOfThisPlate)
+                        if strcmp(fieldsOfThisPlate{f}(end-1:end), 'vy')
+                            fieldForThreshold = fieldsOfThisPlate{f};
+                            continue;
+                        end
+                    end
+                    % disp(fieldForThreshold);
+
+                    Fz = app.grf_forces_zero_leveled.(fieldForThreshold);
+                    Fz(Fz<threshold) = nan;
+
+                    % logic analog to orginial AMTITreadmillGaitCycleEvents.m from Vicon support website
+                    % Find the locations of the NaN values. This will give a value for -1 for the first frame at which the data is not a NaN and a 1 for the last frame for NaN's.
+                    nanValues = diff([true; isnan(Fz); true]);
+                    footStrikes = find(nanValues < 0);
+                    footOffs = find(nanValues > 0)-1;
+
+                    validChanges = find(footOffs - footStrikes > app.frequency_);
+
+                    footStrikes = footStrikes(validChanges);
+                    footOffs = footOffs(validChanges);
+                    hasValidSteps = 0;
+                    try
+                        if Fz(1) > threshold
+                            footStrikes = footStrikes(2:end);
+                        end
+
+                        if Fz(end) > threshold
+                            footOffs = footOffs(1:end-1);
+                        end
+
+                        if footOffs(1) < footStrikes(1)
+                            footOffs = footOffs(2:end);
+                        end
+                        hasValidSteps = 1;
+                    catch e
+                        if strcmp(e.message, 'Index exceeds array bounds.')
+                            hasValidSteps = 0;
+                        end
+                    end
+
+                    if hasValidSteps
+
+                        footStrikes_Optical = floor(footStrikes / app.forceFrequency * app.frequency_) + 1 + app.firstFrame_;
+                        footOffs_Optical = floor(footOffs / app.forceFrequency * app.frequency_) + app.firstFrame_;
+
+                        footStrikes_Optical = footStrikes_Optical;
+                        footOffs_Optical = footOffs_Optical;
+                        frameThreshold = 5;
+
+                        % check the selected steps on this plate
+                        footStrikesOnThisForcePlate = [];
+                        for step = 1 : size(app.leftStepForcePlateAssignment, 1)
+                            if app.leftStepForcePlateAssignment(step, 2) == fpNumbersUnique(i)
+                                footStrikesOnThisForcePlate(end+1) = app.leftStepForcePlateAssignment(step, 1);
                             end
-                        else
-                            % do not filter time
-                            app.grf_forces_adjusted.(char(forcesFields(i))) = app.grf_forces_zero_leveled.(char(forcesFields(i)));
+                        end
+                        for step = 1 : size(app.rightStepForcePlateAssignment, 1)
+                            if app.rightStepForcePlateAssignment(step, 2) == fpNumbersUnique(i)
+                                footStrikesOnThisForcePlate(end+1) = app.rightStepForcePlateAssignment(step, 1);
+                            end
+                        end
+
+                        hasValidStepThatIsAlsoSelected = 0;
+                        for f = 1 : numel(fieldsOfThisPlate)
+                            newData = zeros(size(app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})));
+                            % filteredData = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(fieldsOfThisPlate{f}));
+                            % filter each step seperately if it is selected in the GUI and concatenate results
+                            for step = 1 : numel(footStrikes_Optical)
+                                if sum(and(footStrikesOnThisForcePlate >= footStrikes_Optical(step) - frameThreshold, footStrikesOnThisForcePlate <= footStrikes_Optical(step) + frameThreshold)) > 0 
+                                    idxFootContact = footStrikes(step) : footOffs(step);
+                                    hasValidStepThatIsAlsoSelected = 1;
+
+                                    if contains(fieldsOfThisPlate{f}(end-4:end), '_p')
+                                        % cut several frames at beginning and end to ensure that the point of application does not go back to zero - would result in problems for filtered data
+                                        dataToFilter = app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})(idxFootContact(timeThresholdFPs+1 : end-timeThresholdFPs));
+                                        % filter the data
+                                        filteredStep = filtfilt(filter_b, filter_a, dataToFilter);
+                                        % interpolate to the original length
+                                        lengthOfStep = size(idxFootContact, 2);
+                                        filteredStep_originalLength = interp1(1:size(filteredStep, 1), filteredStep, linspace(1, size(filteredStep, 1), lengthOfStep));
+                                        % set the filtered data to the output variable
+                                        newData(idxFootContact) = filteredStep_originalLength;
+
+                                    elseif contains(fieldsOfThisPlate{f}(end-4:end), '_v') || contains(fieldsOfThisPlate{f}(end-4:end), '_m')
+                                        dataToFilter = app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})(idxFootContact);
+                                        % filter the data
+                                        filteredStep = filtfilt(filter_b, filter_a, dataToFilter);
+                                        newData(idxFootContact) = filteredStep;
+                                    else
+                                        disp('not sure what field this is');
+                                    end
+                                end
+                            end
+
+                            if hasValidStepThatIsAlsoSelected
+                                app.grf_forces_adjusted.(fieldsOfThisPlate{f}) = newData;
+                            else
+                                % no selected steps on this force plate, filter where Fz is over threshold
+                                idxFootContact = ~isnan(Fz);
+
+                                for f = 1 : numel(fieldsOfThisPlate)
+                                    newData = zeros(size(app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})));
+                                    filteredData = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})(idxFootContact));
+                                    newData(idxFootContact) = filteredData;
+                                    app.grf_forces_adjusted.(fieldsOfThisPlate{f}) = newData;
+                                end
+                            end
+                        end
+                    else
+                        % no valid steps on this force plate, filter where Fz is over threshold
+                        idxFootContact = ~isnan(Fz);
+
+                        for f = 1 : numel(fieldsOfThisPlate)
+                            newData = zeros(size(app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})));
+                            filteredData = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})(idxFootContact));
+                            newData(idxFootContact) = filteredData;
+                            app.grf_forces_adjusted.(fieldsOfThisPlate{f}) = newData;
                         end
                     end
                 end
             else
                 app.grf_forces_adjusted = app.grf_forces_zero_leveled;
             end
+
+
+
+            % old version
+
+            % threshold = 20;
+            % timeThresholdFPs = 10;
+            % if app.AMTITandemTreadmillCheckBox.Value == 1
+            %     timeThresholdFPs = 50;
+            % end
+            % if app.filterGRFsCheckBox.Value && app.c3d.getNumForces() > 0
+            %     app.grf_forces_adjusted = [];
+            %     Fs = app.forceFrequency;  % Sampling Frequency
+            %     N  = app.filterorderSpinner.Value;  % Filter Order
+            %     Fc = app.cutofffrequencySpinner.Value;  % Cutoff Frequency
+            %     [filter_b, filter_a] = butter(N/2,Fc/(Fs/2), 'low'); % divide order by 2 because filtfilt doubles it again
+            %     forcesFields = fieldnames(app.grf_forces_zero_leveled);
+            %
+            %     forcesFields = sort(forcesFields);
+            %     for i = 1 : numel(forcesFields)
+            %         if char(forcesFields(i)) ~= "time" && ~contains(forcesFields(i), '_p')
+            %             fieldForThreshold = strrep(forcesFields(i), '_moment', '_force');
+            %             fieldForThreshold{1}(end) = 'y';
+            %             fieldForThreshold{1}(end-1) = 'v';
+            %             app.grf_forces_adjusted.(char(forcesFields(i))) = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(char(forcesFields(i))));
+            %             if app.AMTITandemTreadmillCheckBox.Value
+            %                 idxUnderThreshold = app.grf_forces_zero_leveled.(fieldForThreshold{1}) < threshold;
+            %                 app.grf_forces_adjusted.(char(forcesFields(i)))(idxUnderThreshold) = 0;
+            %             else
+            %                 if app.doPostZeroLevellingCheckBox.Value == 1
+            %                     firstIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})) > threshold, 1);
+            %                     lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 100 : end)) < threshold, 1) + firstIndexOverThreshold + 99;
+            %                     app.grf_forces_adjusted.(char(forcesFields(i)))(1 : firstIndexOverThreshold-1) = 0;
+            %                     app.grf_forces_adjusted.(char(forcesFields(i)))(lastIndexOverThreshold : end) = 0;
+            %                 end
+            %             end
+            %         else % other filtering for point of application
+            %             if contains(forcesFields(i), '_p') && app.doPostZeroLevellingCheckBox.Value == 1 && app.AMTITandemTreadmillCheckBox.Value ~= 1
+            %                 fieldForThreshold = strrep(forcesFields(i), '_moment', '_force');
+            %                 fieldForThreshold{1}(end) = 'y';
+            %                 fieldForThreshold{1}(end-1) = 'v';
+            %
+            %                 firstIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})) > threshold, 1);
+            %
+            %                 lastIndexOverThreshold = find(abs(app.grf_forces_zero_leveled.(fieldForThreshold{1})(firstIndexOverThreshold + 100 : end)) < threshold, 1) + firstIndexOverThreshold + 100;
+            %                 tmp_maxTimeThresholdStart = min(timeThresholdFPs, firstIndexOverThreshold);
+            %                 tmp_step = app.grf_forces_zero_leveled.(char(forcesFields(i)))(firstIndexOverThreshold + tmp_maxTimeThresholdStart : lastIndexOverThreshold - timeThresholdFPs);
+            %                 tmp_step_filtered = filtfilt(filter_b, filter_a, tmp_step);
+            %                 if size(tmp_step_filtered, 1) > 1
+            %                     tmp_interpolated = interp1(1 : size(tmp_step_filtered, 1), tmp_step_filtered, linspace(1, size(tmp_step_filtered, 1), lastIndexOverThreshold - firstIndexOverThreshold + tmp_maxTimeThresholdStart + timeThresholdFPs));
+            %                     if lastIndexOverThreshold >= size(app.grf_forces_zero_leveled.(fieldForThreshold{1}), 1)
+            %                         tmp_interpolated = tmp_interpolated(1 : end - 30);
+            %                     end
+            %                     app.grf_forces_adjusted.(char(forcesFields(i))) = [zeros(1, firstIndexOverThreshold - tmp_maxTimeThresholdStart), tmp_interpolated, zeros(1, length(app.grf_forces_zero_leveled.(char(forcesFields(i)))) - lastIndexOverThreshold - timeThresholdFPs)]';
+            %                 else
+            %                     app.grf_forces_adjusted.(char(forcesFields(i))) = app.grf_forces_zero_leveled.(char(forcesFields(i)));
+            %                 end
+            %             else
+            %                 if app.AMTITandemTreadmillCheckBox.Value == 1 && and(~contains(forcesFields(i), 'time'), ~contains(forcesFields(i), 'Time'))
+            %
+            %                     if forcesFields{i}(end-3) == '1' % right side
+            %                         newData = nan(size(app.grf_forces_zero_leveled.(char(forcesFields(i)))));
+            %
+            %                         for n = 1 : size(app.rightListBox.Value, 2)
+            %                             idxFootStrike = str2double(app.rightListBox.Value{n}) - app.firstFrame_;
+            %                             idxFootOff = app.rightFootOffList(find(app.rightFootOffList - app.firstFrame_ > idxFootStrike, 1)) - app.firstFrame_ + 3;
+            %                             idxOfStep = int32(idxFootStrike / app.frequency_ * app.forceFrequency : idxFootOff / app.frequency_ * app.forceFrequency);
+            %                             tmp_step = app.grf_forces_zero_leveled.(char(forcesFields(i)))(idxOfStep);
+            %                             lengthOfStep = size(tmp_step, 1);
+            %                             tmp_step_filtered = filtfilt(filter_b, filter_a, tmp_step(timeThresholdFPs : end - timeThresholdFPs));
+            %
+            %                             step_filtered_originalLength = interp1(1:size(tmp_step_filtered, 1), tmp_step_filtered, linspace(1, size(tmp_step_filtered, 1), lengthOfStep));
+            %
+            %                             newData(idxOfStep) = step_filtered_originalLength;
+            %                         end
+            %                         newData(isnan(newData)) = 0;
+            %                         app.grf_forces_adjusted.(char(forcesFields(i))) = newData;
+            %
+            %                     elseif forcesFields{i}(end-3) == '2' % left side
+            %                          newData = nan(size(app.grf_forces_zero_leveled.(char(forcesFields(i)))));
+            %
+            %                         for n = 1 : size(app.leftListBox.Value, 2)
+            %                             idxFootStrike = str2double(app.leftListBox.Value{n}) - app.firstFrame_;
+            %                             idxFootOff = app.leftFootOffList(find(app.leftFootOffList - app.firstFrame_ > idxFootStrike, 1)) - app.firstFrame_ + 3;
+            %                             idxOfStep = int32(idxFootStrike / app.frequency_ * app.forceFrequency : idxFootOff / app.frequency_ * app.forceFrequency);
+            %                             tmp_step = app.grf_forces_zero_leveled.(char(forcesFields(i)))(idxOfStep);
+            %                             lengthOfStep = size(tmp_step, 1);
+            %                             tmp_step_filtered = filtfilt(filter_b, filter_a, tmp_step(timeThresholdFPs : end - timeThresholdFPs));
+            %
+            %                             step_filtered_originalLength = interp1(1:size(tmp_step_filtered, 1), tmp_step_filtered, linspace(1, size(tmp_step_filtered, 1), lengthOfStep));
+            %
+            %                             newData(idxOfStep) = step_filtered_originalLength;
+            %                         end
+            %                         newData(isnan(newData)) = 0;
+            %                         app.grf_forces_adjusted.(char(forcesFields(i))) = newData;
+            %                     else % original front and back data
+            %                         app.grf_forces_adjusted.(char(forcesFields(i))) = app.grf_forces_zero_leveled.(char(forcesFields(i)));
+            %                     end
+            %                 else
+            %                     % do not filter time
+            %                     app.grf_forces_adjusted.(char(forcesFields(i))) = app.grf_forces_zero_leveled.(char(forcesFields(i)));
+            %                 end
+            %             end
+            %         end
+            %     end
+            % else
+            %     app.grf_forces_adjusted = app.grf_forces_zero_leveled;
+            % end
         end
 
         function resetGUI(app)
@@ -322,7 +532,7 @@ classdef processC3D_exported < matlab.apps.AppBase
         end
 
         function processC3Dfile(app)
-            
+
             if app.c3dFileName ~= 0
                 d = uiprogressdlg(app.PrepareC3DfileUIFigure,'Title','Please Wait', 'Message','Opening the selected C3D file and performing some calculations ... ');
                 app.SelectaC3DfileLabel.FontColor = 'black';
@@ -365,27 +575,27 @@ classdef processC3D_exported < matlab.apps.AppBase
                         app.rightFootOffList = floor(c3devents.Right_Foot_Off * app.frequency_);
                     else
                         app.rightFootOffList = [];
-                    end                
+                    end
                     if isempty(app.rightListBox.Items) && isempty(app.leftListBox.Items)
-                        answer = 'Yes'; % MFquestdlg([0.4, 0.4], 'No events in the c3d file! Therefore, start and end of the trial as well as the foot contact with the force plates cannot be calculated automatically! Do you want to set the force plates manually?', 'Define manually?', 'Yes', 'No, I''ll experimentally check what the result of this is or select another file', 'Yes');
+                        answer = 'Yes'; %MFquestdlg([0.4, 0.4], 'No events in the c3d file! Therefore, start and end of the trial as well as the foot contact with the force plates cannot be calculated automatically! Do you want to set the force plates manually?', 'Define manually?', 'Yes', 'No, I''ll experimentally check what the result of this is or select another file', 'Yes');
                         if ~strcmp(answer, 'Yes')
                             return;
                         end
                         if strcmp(answer, 'Yes')
                             app.Ignorec3deventsCheckBox.Value = 1;
                             app.detectforceplatesautomaticallyCheckBox.Value = 0;
-                            app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 0;
+                            app.doPostZeroLevellingCheckBox.Value = 0;
                             app.validfootstrikeeventsLabel.Visible = "off";
                             app.forceplatecontactsLabel.Visible = "on";
                         end
                     end
                 else
-%                     % not good if you open another trial with the same
-%                     % settings...
-%                     app.rightListBox.Items = {};
-%                     app.rightFootStrikeList = {};
-%                     app.leftListBox.Items = {};
-%                     app.leftFootStrikeList = {};
+                    %                     % not good if you open another trial with the same
+                    %                     % settings...
+                    %                     app.rightListBox.Items = {};
+                    %                     app.rightFootStrikeList = {};
+                    %                     app.leftListBox.Items = {};
+                    %                     app.leftFootStrikeList = {};
                 end
 
                 drawnow;
@@ -463,7 +673,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                         leftList = {};
                         rightList = {};
                     end
-    
+
                     if ~isequal(leftList, app.leftListBox) || ~isequal(rightList, app.rightListBox)
                         app.rightListBox.Items = rightList;
                         app.leftListBox.Items = leftList;
@@ -504,7 +714,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                 d.Value = d.Value + 0.1;
                 d.Message = 'process and filter forces...';
                 if app.c3d.getNumForces() ~= 0
-                    setGRFstozerooutsideregionoffootcontactCheckBoxValueChanged(app, 0);
+                    doPostZeroLevellingCheckBoxValueChanged(app, 0);
                 end
                 d.Value = d.Value + 0.1;
                 d.Message = 'updating plots...';
@@ -530,11 +740,11 @@ classdef processC3D_exported < matlab.apps.AppBase
                 app.openselectedfilewithdefaultprogramButton.Visible = 0;
             end
         end
-        
+
         function mirrorMarkerData(app, filename)
             disp('mirroring marker data...')
             d.Message = 'mirroring marker data...';
-            
+
             text = fileread(filename);
             lines = strsplit(text, '\n');
             data = [];
@@ -764,9 +974,9 @@ classdef processC3D_exported < matlab.apps.AppBase
                     for row = 1 : numel(data)-1
                         rowStr = '';
                         for col = 1 : numel(data{row})
-                           try rowStr = [rowStr, num2str(data{row}{col}), '\t'];
-                           catch rowStr = [rowStr, data{row}{col}, '\t'];
-                           end
+                            try rowStr = [rowStr, num2str(data{row}{col}), '\t'];
+                            catch rowStr = [rowStr, data{row}{col}, '\t'];
+                            end
                         end
                         if ~isempty(rowStr)
                             rowStr(end-2 : end) = [];
@@ -814,7 +1024,7 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                     app.grf_forces = load_sto_file(grfFileName);
 
-                    setGRFstozerooutsideregionoffootcontactCheckBoxValueChanged(app, 0);
+                    doPostZeroLevellingCheckBoxValueChanged(app, 0);
                     filterGRFs(app);
 
                     % reorder fieldnames otherwise OpenSim cannot process it
@@ -859,28 +1069,35 @@ classdef processC3D_exported < matlab.apps.AppBase
                 grforces_generated = xml_read('GRF_file_empty.xml');
                 counter = 1;
                 if app.Ignorec3deventsCheckBox.Value == 0
-                    if ~app.mirrorCheckBox.Value
-                        for i = 1 : size(app.rightStepForcePlateAssignment, 1)
-                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.rightStepForcePlateAssignment(i, 2));
-                            counter = counter + 1;
-                        end
-                        for i = 1 : size(app.leftStepForcePlateAssignment, 1)
-                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.leftStepForcePlateAssignment(i, 2));
-                            counter = counter + 1;
-                        end
+                    if app.AMTITandemTreadmillCheckBox.Value
+                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.rightStepForcePlateAssignment(i, 2));
+                        counter = counter + 1;
+                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.leftStepForcePlateAssignment(i, 2));
+                        counter = counter + 1;
                     else
-                        for i = 1 : size(app.rightStepForcePlateAssignment, 1)
-                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.rightStepForcePlateAssignment(i, 2));
-                            counter = counter + 1;
-                        end
-                        for i = 1 : size(app.leftStepForcePlateAssignment, 1)
-                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.leftStepForcePlateAssignment(i, 2));
-                            counter = counter + 1;
+                        if ~app.mirrorCheckBox.Value
+                            for i = 1 : size(app.rightStepForcePlateAssignment, 1)
+                                grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.rightStepForcePlateAssignment(i, 2));
+                                counter = counter + 1;
+                            end
+                            for i = 1 : size(app.leftStepForcePlateAssignment, 1)
+                                grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.leftStepForcePlateAssignment(i, 2));
+                                counter = counter + 1;
+                            end
+                        else
+                            for i = 1 : size(app.rightStepForcePlateAssignment, 1)
+                                grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.rightStepForcePlateAssignment(i, 2));
+                                counter = counter + 1;
+                            end
+                            for i = 1 : size(app.leftStepForcePlateAssignment, 1)
+                                grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.leftStepForcePlateAssignment(i, 2));
+                                counter = counter + 1;
+                            end
                         end
                     end
                     Pref = struct;
                     Pref.StructItem = false;
-    
+
                     d.Value = d.Value + 0.1;
                     d.Message = 'writing GRF.XML ...';
                     xml_write(fullfile(output_folder, 'GRF.xml'), grforces_generated, 'OpenSimDocument', Pref);
@@ -897,7 +1114,7 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                     Pref = struct;
                     Pref.StructItem = false;
-    
+
                     d.Value = d.Value + 0.1;
                     d.Message = 'writing GRF.XML ...';
                     xml_write(fullfile(output_folder, 'GRF.xml'), grforces_generated, 'OpenSimDocument', Pref);
@@ -931,9 +1148,9 @@ classdef processC3D_exported < matlab.apps.AppBase
                         end
                     end
 
-                    cycle_tmp = cycle;
-                    cycle = struct;
                     if app.mirrorCheckBox.Value
+                        cycle_tmp = cycle;
+                        cycle = struct;
                         if isfield(cycle_tmp, 'right')
                             cycle.left = cycle_tmp.right;
                         end
@@ -1004,10 +1221,10 @@ classdef processC3D_exported < matlab.apps.AppBase
                     marker = load_marker_trc(fullfile(output_folder, 'marker_experimental.trc'));
                     markerLength = length(marker.RFIN_X);
                     forceLength = length(app.EMG.time);
-                    
+
                     tmp_fields = fieldnames(app.EMG);
                     forces.time = app.EMG.time;
-                    
+
                     forces.ground_force_1_vx = zeros(length(forces.time), 1);
                     if xor(app.invertforcesensorsCheckBox.Value, app.mirrorCheckBox.Value)
                         forces.ground_force_1_vy = app.EMG.(tmp_fields{contains(tmp_fields, 'Fz_right')});
@@ -1081,7 +1298,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                 app.rightListBox.Value = app.rightListBox.Value(I);
                 if app.fileLoaded && app.c3d.getNumForces() > 0
                     %                 detectforceplatesautomaticallyCheckBoxValueChanged(app, 0);
-                    %                 setGRFstozerooutsideregionoffootcontactCheckBoxValueChanged(app, 0);
+                    %                 doPostZeroLevellingCheckBoxValueChanged(app, 0);
 
 
                     selectedFrames = cellfun(@str2double, app.rightListBox.Value);
@@ -1126,100 +1343,122 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                     xlim(app.UIAxesGRFs, [minLim maxLim])
                 end
+            catch e
+                disp(e.message);
             end
         end
 
         % Value changed function: detectFPbyMarker, 
         % ...and 1 other component
         function detectforceplatesautomaticallyCheckBoxValueChanged(app, event)
-
-            if app.detectforceplatesautomaticallyCheckBox.Value
-                if app.fileLoaded
-                    app.c3d.rotateData('x', 90);
-                    temp_markers = osimTableToStruct(app.c3d.getTable_markers);
-                    if isfield(temp_markers, app.detectFPbyMarker.Value)
-                        app.detectFPbyMarker.BackgroundColor = 'white';
-                        app.detectFPbyMarker.FontColor = 'black';
-                        app.leftStepForcePlateAssignment = [];
-                        app.rightStepForcePlateAssignment = [];
-                        [forceplates, ~] = btkGetForcePlatforms(app.acq);
-
-                        for i = 1 : size(app.leftListBox.Value, 2)
-                            % find closest forceplate to heel marker
-                            heelLocation = temp_markers.(app.detectFPbyMarker.Value)(str2double(app.leftListBox.Value{i}) - app.firstFrame_ + 20, :) * 1000;
-                            isset = 0;
-                            for j = 1 : size(forceplates, 1)
-                                fpXlimits = sort(forceplates(j).corners(1, :));
-                                fpYlimits = sort(forceplates(j).corners(2, :));
-                                if heelLocation(1) > fpXlimits(1) && heelLocation(1) < fpXlimits(3) ...
-                                        && heelLocation(2) > fpYlimits(1) && heelLocation(2) < fpYlimits(3)
-                                    isset = 1;
-                                    break;
-                                end
-                            end
-                            if isset
-                                app.leftStepForcePlateAssignment(end+1, 1) = str2double(app.leftListBox.Value{i});
-                                app.leftStepForcePlateAssignment(end, 2) = j;
-                            end
-                        end
-                        for i = 1 : size(app.rightListBox.Value, 2)
-                            if isfield(temp_markers, (strrep(app.detectFPbyMarker.Value, 'L', 'R')))
-                                rightMarkerName = (strrep(app.detectFPbyMarker.Value, 'L', 'R'));
-                            else
-                                rightMarkerName = app.detectFPbyMarker.Value;
-                            end
-                            % find closest forceplate to heel marker
-                            heelLocation = temp_markers.(rightMarkerName)(str2double(app.rightListBox.Value{i}) - app.firstFrame_ + 20, :) * 1000;
-                            isset = 0;
-                            for j = 1 : size(forceplates, 1)
-                                fpXlimits = sort(forceplates(j).corners(1, :));
-                                fpYlimits = sort(forceplates(j).corners(2, :));
-                                if heelLocation(1) > fpXlimits(1) && heelLocation(1) < fpXlimits(3) ...
-                                        && heelLocation(2) > fpYlimits(1) && heelLocation(2) < fpYlimits(3)
-                                    isset = 1;
-                                    break;
-                                end
-                            end
-                            if isset
-                                app.rightStepForcePlateAssignment(end+1, 1) = str2double(app.rightListBox.Value{i});
-                                app.rightStepForcePlateAssignment(end, 2) = j;
-                            end
-                        end
-                    else
-                        app.detectFPbyMarker.Value = 'SET THIS!';
-                        app.detectFPbyMarker.BackgroundColor = 'red';
-                        app.detectFPbyMarker.FontColor = 'white';
-                        app.detectforceplatesautomaticallyCheckBox.Value = 0;
-                    end
-
-                    app.c3d.rotateData('x', -90);
-
-                    app.rightStepForcePlateAssignmentAll = app.rightStepForcePlateAssignment;
-                    app.leftStepForcePlateAssignmentAll = app.leftStepForcePlateAssignment;
-                    updateCyclePlot(app);
+            app.leftStepForcePlateAssignment = [];
+            app.rightStepForcePlateAssignment = [];
+            if app.AMTITandemTreadmillCheckBox.Value
+                for i = 1 : size(app.leftListBox.Value, 2)
+                    app.leftStepForcePlateAssignment(end+1, 1) = str2double(app.leftListBox.Value{i});
+                    app.leftStepForcePlateAssignment(end, 2) = 2; % FP2 is always left leg
                 end
-                app.setGRFstozerooutsideregionoffootcontactCheckBox.Enable = "on";
-            else
-                app.leftStepForcePlateAssignment = [];
-                app.rightStepForcePlateAssignment = [];
-                app.leftStepForcePlateAssignmentAll = [];
-                app.rightStepForcePlateAssignmentAll = [];
+                for i = 1 : size(app.rightListBox.Value, 2)
+                    app.rightStepForcePlateAssignment(end+1, 1) = str2double(app.rightListBox.Value{i});
+                    app.rightStepForcePlateAssignment(end, 2) = 1; % FP1 is always right leg
+                end
+                app.rightStepForcePlateAssignmentAll = app.rightStepForcePlateAssignment;
+                app.leftStepForcePlateAssignmentAll = app.leftStepForcePlateAssignment;
                 updateCyclePlot(app);
-                app.setGRFstozerooutsideregionoffootcontactCheckBox.Enable = "off";
-                app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 0;
+            else
+                if app.detectforceplatesautomaticallyCheckBox.Value
+                    if app.fileLoaded
+                        app.c3d.rotateData('x', 90);
+                        temp_markers = osimTableToStruct(app.c3d.getTable_markers);
+                        if isfield(temp_markers, app.detectFPbyMarker.Value)
+                            app.detectFPbyMarker.BackgroundColor = 'white';
+                            app.detectFPbyMarker.FontColor = 'black';
+                            app.leftStepForcePlateAssignment = [];
+                            app.rightStepForcePlateAssignment = [];
+                            [forceplates, ~] = btkGetForcePlatforms(app.acq);
 
-                if ~isempty(app.c3d) && app.c3d.getNumForces() ~= 0
-                    setGRFstozerooutsideregionoffootcontactCheckBoxValueChanged(app, 0);
+                            for i = 1 : size(app.leftListBox.Value, 2)
+                                % find closest forceplate to heel marker
+                                heelLocation = temp_markers.(app.detectFPbyMarker.Value)(str2double(app.leftListBox.Value{i}) - app.firstFrame_ + 20, :);
+                                if max(heelLocation) < 10
+                                    heelLocation = heelLocation * 1000;
+                                end
+                                isset = 0;
+                                for j = 1 : size(forceplates, 1)
+                                    fpXlimits = sort(forceplates(j).corners(1, :));
+                                    fpYlimits = sort(forceplates(j).corners(2, :));
+                                    if heelLocation(1) > fpXlimits(1) && heelLocation(1) < fpXlimits(3) ...
+                                            && heelLocation(2) > fpYlimits(1) && heelLocation(2) < fpYlimits(3)
+                                        isset = 1;
+                                        break;
+                                    end
+                                end
+                                if isset
+                                    app.leftStepForcePlateAssignment(end+1, 1) = str2double(app.leftListBox.Value{i});
+                                    app.leftStepForcePlateAssignment(end, 2) = j;
+                                end
+                            end
+                            for i = 1 : size(app.rightListBox.Value, 2)
+                                if strcmp(app.detectFPbyMarker.Value(1), 'L')
+                                    rightMarkerName = ['R' app.detectFPbyMarker.Value(2:end)];
+                                else
+                                    rightMarkerName = app.detectFPbyMarker.Value;
+                                end
+                                % find closest forceplate to heel marker
+                                heelLocation = temp_markers.(rightMarkerName)(str2double(app.rightListBox.Value{i}) - app.firstFrame_ + 20, :);
+                                if max(heelLocation) < 10
+                                    heelLocation = heelLocation * 1000;
+                                end
+                                isset = 0;
+                                for j = 1 : size(forceplates, 1)
+                                    fpXlimits = sort(forceplates(j).corners(1, :));
+                                    fpYlimits = sort(forceplates(j).corners(2, :));
+                                    if heelLocation(1) > fpXlimits(1) && heelLocation(1) < fpXlimits(3) ...
+                                            && heelLocation(2) > fpYlimits(1) && heelLocation(2) < fpYlimits(3)
+                                        isset = 1;
+                                        break;
+                                    end
+                                end
+                                if isset
+                                    app.rightStepForcePlateAssignment(end+1, 1) = str2double(app.rightListBox.Value{i});
+                                    app.rightStepForcePlateAssignment(end, 2) = j;
+                                end
+                            end
+                        else
+                            app.detectFPbyMarker.Value = 'SET THIS!';
+                            app.detectFPbyMarker.BackgroundColor = 'red';
+                            app.detectFPbyMarker.FontColor = 'white';
+                            app.detectforceplatesautomaticallyCheckBox.Value = 0;
+                        end
+
+                        app.c3d.rotateData('x', -90);
+
+                        app.rightStepForcePlateAssignmentAll = app.rightStepForcePlateAssignment;
+                        app.leftStepForcePlateAssignmentAll = app.leftStepForcePlateAssignment;
+                        updateCyclePlot(app);
+                    end
+                    app.doPostZeroLevellingCheckBox.Enable = "on";
+                else
+                    app.leftStepForcePlateAssignment = [];
+                    app.rightStepForcePlateAssignment = [];
+                    app.leftStepForcePlateAssignmentAll = [];
+                    app.rightStepForcePlateAssignmentAll = [];
+                    updateCyclePlot(app);
+                    app.doPostZeroLevellingCheckBox.Enable = "off";
+                    app.doPostZeroLevellingCheckBox.Value = 0;
+
+                    if ~isempty(app.c3d) && app.c3d.getNumForces() ~= 0
+                        doPostZeroLevellingCheckBoxValueChanged(app, 0);
+                    end
                 end
             end
         end
 
-        % Value changed function: 
-        % setGRFstozerooutsideregionoffootcontactCheckBox
-        function setGRFstozerooutsideregionoffootcontactCheckBoxValueChanged(app, event)
+        % Value changed function: doPostZeroLevellingCheckBox
+        function doPostZeroLevellingCheckBoxValueChanged(app, event)
             if app.fileLoaded
                 app.grf_forces_zero_leveled = [];
-                if app.setGRFstozerooutsideregionoffootcontactCheckBox.Value
+                if app.doPostZeroLevellingCheckBox.Value
 
                     forcesFields = fieldnames(app.grf_forces);
                     footStrikes = str2double(app.leftListBox.Value);
@@ -1238,8 +1477,8 @@ classdef processC3D_exported < matlab.apps.AppBase
                             end
                             meanVal = mean(forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(1 : footStrikeIndex - meanOffset));
                             forces_zero_leveled.(char(forcesFieldsOfThisFP(j))) = forces_zero_leveled.(char(forcesFieldsOfThisFP(j))) - meanVal;
-                            forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(1 : footStrikeIndex) = 0;
-                            forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(nextStrike : end) = 0;
+                            % forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(1 : footStrikeIndex) = 0;
+                            % forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(nextStrike : end) = 0;
                             %                             if contains(forcesFieldsOfThisFP(j), '_vy')
                             %                                 forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(forces_zero_leveled.(char(forcesFieldsOfThisFP(j))) < 0) = 0;
                             %                             end
@@ -1266,8 +1505,8 @@ classdef processC3D_exported < matlab.apps.AppBase
                             end
                             meanVal = mean(forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(1 : footStrikeIndex - meanOffset));
                             forces_zero_leveled.(char(forcesFieldsOfThisFP(j))) = forces_zero_leveled.(char(forcesFieldsOfThisFP(j))) - meanVal;
-                            forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(1 : footStrikeIndex) = 0;
-                            forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(nextStrike : end) = 0;
+                            % forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(1 : footStrikeIndex) = 0;
+                            % forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(nextStrike : end) = 0;
                             %                             if contains(forcesFieldsOfThisFP(j), '_vy')
                             %                                 forces_zero_leveled.(char(forcesFieldsOfThisFP(j)))(forces_zero_leveled.(char(forcesFieldsOfThisFP(j))) < 0) = 0;
                             %                             end
@@ -1331,17 +1570,27 @@ classdef processC3D_exported < matlab.apps.AppBase
                 app.forceplatecontactsLabel.Visible = "on";
                 app.validfootstrikeeventsLabel.Visible = "off";
                 app.detectforceplatesautomaticallyCheckBox.Value = 0;
-                app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 0;
+                app.doPostZeroLevellingCheckBox.Value = 0;
             else
                 app.forceplatecontactsLabel.Visible = "off";
                 app.validfootstrikeeventsLabel.Visible = "on";
                 app.detectforceplatesautomaticallyCheckBox.Value = 1;
-                app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 1;
-                answer = MFquestdlg([0.4, 0.4], 'Reprocess the c3d file to identify events and foot contacts?', 'Reprocess?', 'Yes', 'No', 'Yes');
+                app.doPostZeroLevellingCheckBox.Value = 0;
+                answer = 'Yes'; %MFquestdlg([0.4, 0.4], 'Reprocess the c3d file to identify events and foot contacts?', 'Reprocess?', 'Yes', 'No', 'Yes');
                 if strcmp(answer, 'Yes')
                     app.processC3Dfile();
                 end
             end
+        end
+
+        % Value changed function: AMTITandemTreadmillCheckBox
+        function AMTITandemTreadmillCheckBoxValueChanged(app, event)
+            % value = app.AMTITandemTreadmillCheckBox.Value;
+            app.doPostZeroLevellingCheckBox.Value = 0;
+            app.detectwalkingdirectionautomaticallybymarkerCheckBox.Value = 0;
+            app.rotatearoundyaxisDropDown.Value = '90°';
+            app.rotatearoundyaxisDropDown.Enable = "on";
+            app.detectforceplatesautomaticallyCheckBox.Value = 0;
         end
     end
 
@@ -1353,7 +1602,7 @@ classdef processC3D_exported < matlab.apps.AppBase
 
             % Create PrepareC3DfileUIFigure and hide until all components are created
             app.PrepareC3DfileUIFigure = uifigure('Visible', 'off');
-            app.PrepareC3DfileUIFigure.Position = [10 10 1294 829];
+            app.PrepareC3DfileUIFigure.Position = [10 10 1517 917];
             app.PrepareC3DfileUIFigure.Name = 'PrepareC3Dfile';
             app.PrepareC3DfileUIFigure.Interruptible = 'off';
 
@@ -1361,22 +1610,28 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.UIAxesSteps = uiaxes(app.PrepareC3DfileUIFigure);
             title(app.UIAxesSteps, 'Steps')
             ylabel(app.UIAxesSteps, '\color{red}left \color{black} and \color{green} right \color{black} cycles')
+            app.UIAxesSteps.XTickLabelRotation = 0;
             app.UIAxesSteps.YTick = [-1 -0.5 0 0.5 1];
+            app.UIAxesSteps.YTickLabelRotation = 0;
             app.UIAxesSteps.YTickLabel = {'-1'; '-0.5'; '0'; '0.5'; '1'};
-            app.UIAxesSteps.Position = [15 329 1269 158];
+            app.UIAxesSteps.ZTickLabelRotation = 0;
+            app.UIAxesSteps.Position = [16 327 1490 158];
 
             % Create UIAxesGRFs
             app.UIAxesGRFs = uiaxes(app.PrepareC3DfileUIFigure);
             title(app.UIAxesGRFs, 'GRFs')
             xlabel(app.UIAxesGRFs, 'frame')
             ylabel(app.UIAxesGRFs, '[N]')
+            app.UIAxesGRFs.XTickLabelRotation = 0;
+            app.UIAxesGRFs.YTickLabelRotation = 0;
+            app.UIAxesGRFs.ZTickLabelRotation = 0;
             app.UIAxesGRFs.YGrid = 'on';
-            app.UIAxesGRFs.Position = [15 26 1269 304];
+            app.UIAxesGRFs.Position = [16 24 1490 304];
 
             % Create Selectc3dfileButton
             app.Selectc3dfileButton = uibutton(app.PrepareC3DfileUIFigure, 'push');
             app.Selectc3dfileButton.ButtonPushedFcn = createCallbackFcn(app, @Selectc3dfileButtonPushed, true);
-            app.Selectc3dfileButton.Position = [45 716 134 22];
+            app.Selectc3dfileButton.Position = [45 804 134 22];
             app.Selectc3dfileButton.Text = 'Select c3d file';
 
             % Create PrepareC3DfileforOpenSimsimulationsLabel
@@ -1384,67 +1639,66 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.PrepareC3DfileforOpenSimsimulationsLabel.HorizontalAlignment = 'center';
             app.PrepareC3DfileforOpenSimsimulationsLabel.FontSize = 20;
             app.PrepareC3DfileforOpenSimsimulationsLabel.FontWeight = 'bold';
-            app.PrepareC3DfileforOpenSimsimulationsLabel.Position = [1 760 1283 70];
+            app.PrepareC3DfileforOpenSimsimulationsLabel.Position = [1 848 1283 70];
             app.PrepareC3DfileforOpenSimsimulationsLabel.Text = {'Prepare C3D file for OpenSim simulations'; 'creating marker_experimental.trc / grf.mot / grf.xml / settings.mat and a copy of original c3d-file'};
 
             % Create SelectaC3DfileLabel
             app.SelectaC3DfileLabel = uilabel(app.PrepareC3DfileUIFigure);
-            app.SelectaC3DfileLabel.Position = [203 716 682 22];
+            app.SelectaC3DfileLabel.Position = [203 804 682 22];
             app.SelectaC3DfileLabel.Text = 'Select a C3D file';
 
             % Create detectforceplatesautomaticallyCheckBox
             app.detectforceplatesautomaticallyCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.detectforceplatesautomaticallyCheckBox.ValueChangedFcn = createCallbackFcn(app, @detectforceplatesautomaticallyCheckBoxValueChanged, true);
             app.detectforceplatesautomaticallyCheckBox.Text = 'detect forceplates automatically';
-            app.detectforceplatesautomaticallyCheckBox.Position = [45 619 191 22];
+            app.detectforceplatesautomaticallyCheckBox.Position = [51 655 191 22];
             app.detectforceplatesautomaticallyCheckBox.Value = true;
 
             % Create filterGRFsCheckBox
             app.filterGRFsCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.filterGRFsCheckBox.ValueChangedFcn = createCallbackFcn(app, @updateGRF_Plot, true);
             app.filterGRFsCheckBox.Text = 'filter GRFs';
-            app.filterGRFsCheckBox.Position = [45 577 80 22];
+            app.filterGRFsCheckBox.Position = [51 613 80 22];
             app.filterGRFsCheckBox.Value = true;
 
-            % Create setGRFstozerooutsideregionoffootcontactCheckBox
-            app.setGRFstozerooutsideregionoffootcontactCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
-            app.setGRFstozerooutsideregionoffootcontactCheckBox.ValueChangedFcn = createCallbackFcn(app, @setGRFstozerooutsideregionoffootcontactCheckBoxValueChanged, true);
-            app.setGRFstozerooutsideregionoffootcontactCheckBox.Text = 'set GRFs to zero outside region of foot contact and do post zero levelling';
-            app.setGRFstozerooutsideregionoffootcontactCheckBox.Position = [45 598 417 22];
-            app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = true;
+            % Create doPostZeroLevellingCheckBox
+            app.doPostZeroLevellingCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
+            app.doPostZeroLevellingCheckBox.ValueChangedFcn = createCallbackFcn(app, @doPostZeroLevellingCheckBoxValueChanged, true);
+            app.doPostZeroLevellingCheckBox.Text = 'do post zero levelling';
+            app.doPostZeroLevellingCheckBox.Position = [51 634 417 22];
 
             % Create detectwalkingdirectionautomaticallybymarkerCheckBox
             app.detectwalkingdirectionautomaticallybymarkerCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.detectwalkingdirectionautomaticallybymarkerCheckBox.ValueChangedFcn = createCallbackFcn(app, @detectwalkingdirectionautomaticallybymarkerCheckBoxValueChanged, true);
             app.detectwalkingdirectionautomaticallybymarkerCheckBox.Text = 'detect walking direction automatically by marker';
-            app.detectwalkingdirectionautomaticallybymarkerCheckBox.Position = [45 640 280 22];
+            app.detectwalkingdirectionautomaticallybymarkerCheckBox.Position = [51 676 280 22];
             app.detectwalkingdirectionautomaticallybymarkerCheckBox.Value = true;
 
             % Create rotatearoundyaxisDropDownLabel
             app.rotatearoundyaxisDropDownLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.rotatearoundyaxisDropDownLabel.HorizontalAlignment = 'right';
             app.rotatearoundyaxisDropDownLabel.Enable = 'off';
-            app.rotatearoundyaxisDropDownLabel.Position = [396 640 109 22];
+            app.rotatearoundyaxisDropDownLabel.Position = [402 676 109 22];
             app.rotatearoundyaxisDropDownLabel.Text = 'rotate around y axis';
 
             % Create rotatearoundyaxisDropDown
             app.rotatearoundyaxisDropDown = uidropdown(app.PrepareC3DfileUIFigure);
             app.rotatearoundyaxisDropDown.Items = {'0°', '90°', '180°', '270°'};
             app.rotatearoundyaxisDropDown.Enable = 'off';
-            app.rotatearoundyaxisDropDown.Position = [520 640 63 22];
+            app.rotatearoundyaxisDropDown.Position = [526 676 63 22];
             app.rotatearoundyaxisDropDown.Value = '0°';
 
             % Create CreatefilesButton
             app.CreatefilesButton = uibutton(app.PrepareC3DfileUIFigure, 'push');
             app.CreatefilesButton.ButtonPushedFcn = createCallbackFcn(app, @CreatefilesButtonPushed, true);
             app.CreatefilesButton.Enable = 'off';
-            app.CreatefilesButton.Position = [634 496 139 34];
+            app.CreatefilesButton.Position = [640 536 139 34];
             app.CreatefilesButton.Text = 'Create files';
 
             % Create leftListBoxLabel
             app.leftListBoxLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.leftListBoxLabel.HorizontalAlignment = 'right';
-            app.leftListBoxLabel.Position = [558 601 25 22];
+            app.leftListBoxLabel.Position = [564 641 25 22];
             app.leftListBoxLabel.Text = 'left ';
 
             % Create leftListBox
@@ -1452,19 +1706,19 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.leftListBox.Items = {};
             app.leftListBox.Multiselect = 'on';
             app.leftListBox.ValueChangedFcn = createCallbackFcn(app, @updateCycles, true);
-            app.leftListBox.Position = [598 551 100 74];
+            app.leftListBox.Position = [604 591 100 74];
             app.leftListBox.Value = {};
 
             % Create validfootstrikeeventsLabel
             app.validfootstrikeeventsLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.validfootstrikeeventsLabel.FontWeight = 'bold';
-            app.validfootstrikeeventsLabel.Position = [647 640 136 22];
+            app.validfootstrikeeventsLabel.Position = [653 680 136 22];
             app.validfootstrikeeventsLabel.Text = 'valid foot strike events';
 
             % Create rightListBoxLabel
             app.rightListBoxLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.rightListBoxLabel.HorizontalAlignment = 'right';
-            app.rightListBoxLabel.Position = [728 601 29 22];
+            app.rightListBoxLabel.Position = [734 641 29 22];
             app.rightListBoxLabel.Text = 'right';
 
             % Create rightListBox
@@ -1472,31 +1726,31 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.rightListBox.Items = {};
             app.rightListBox.Multiselect = 'on';
             app.rightListBox.ValueChangedFcn = createCallbackFcn(app, @updateCycles, true);
-            app.rightListBox.Position = [772 551 100 74];
+            app.rightListBox.Position = [778 591 100 74];
             app.rightListBox.Value = {};
 
             % Create openselectedfilewithdefaultprogramButton
             app.openselectedfilewithdefaultprogramButton = uibutton(app.PrepareC3DfileUIFigure, 'push');
             app.openselectedfilewithdefaultprogramButton.ButtonPushedFcn = createCallbackFcn(app, @openselectedfilewithdefaultprogramButtonPushed, true);
             app.openselectedfilewithdefaultprogramButton.Visible = 'off';
-            app.openselectedfilewithdefaultprogramButton.Position = [45 678 222 22];
+            app.openselectedfilewithdefaultprogramButton.Position = [45 766 222 22];
             app.openselectedfilewithdefaultprogramButton.Text = 'open selected file with default program';
 
             % Create LogTextAreaLabel
             app.LogTextAreaLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.LogTextAreaLabel.HorizontalAlignment = 'right';
-            app.LogTextAreaLabel.Position = [895 714 26 22];
+            app.LogTextAreaLabel.Position = [1126 825 26 22];
             app.LogTextAreaLabel.Text = 'Log';
 
             % Create LogTextArea
             app.LogTextArea = uitextarea(app.PrepareC3DfileUIFigure);
             app.LogTextArea.Editable = 'off';
-            app.LogTextArea.Position = [936 486 338 252];
+            app.LogTextArea.Position = [1167 484 338 365];
 
             % Create filterorderSpinnerLabel
             app.filterorderSpinnerLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.filterorderSpinnerLabel.HorizontalAlignment = 'right';
-            app.filterorderSpinnerLabel.Position = [156 577 59 22];
+            app.filterorderSpinnerLabel.Position = [162 613 59 22];
             app.filterorderSpinnerLabel.Text = 'filter order';
 
             % Create filterorderSpinner
@@ -1504,142 +1758,147 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.filterorderSpinner.Step = 2;
             app.filterorderSpinner.Limits = [2 10];
             app.filterorderSpinner.ValueChangedFcn = createCallbackFcn(app, @updateGRF_Plot, true);
-            app.filterorderSpinner.Position = [226 577 53 22];
+            app.filterorderSpinner.Position = [232 613 53 22];
             app.filterorderSpinner.Value = 4;
 
             % Create cutofffrequencySpinnerLabel
             app.cutofffrequencySpinnerLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.cutofffrequencySpinnerLabel.HorizontalAlignment = 'right';
-            app.cutofffrequencySpinnerLabel.Position = [293 577 91 22];
+            app.cutofffrequencySpinnerLabel.Position = [299 613 91 22];
             app.cutofffrequencySpinnerLabel.Text = 'cutoff frequency';
 
             % Create cutofffrequencySpinner
             app.cutofffrequencySpinner = uispinner(app.PrepareC3DfileUIFigure);
             app.cutofffrequencySpinner.Limits = [4 100];
             app.cutofffrequencySpinner.ValueChangedFcn = createCallbackFcn(app, @updateGRF_Plot, true);
-            app.cutofffrequencySpinner.Position = [396 577 53 22];
+            app.cutofffrequencySpinner.Position = [402 613 53 22];
             app.cutofffrequencySpinner.Value = 20;
 
             % Create detectWalkingByMarker
             app.detectWalkingByMarker = uieditfield(app.PrepareC3DfileUIFigure, 'text');
             app.detectWalkingByMarker.ValueChangedFcn = createCallbackFcn(app, @detectwalkingdirectionautomaticallybymarkerCheckBoxValueChanged, true);
             app.detectWalkingByMarker.ValueChangingFcn = createCallbackFcn(app, @detectwalkingdirectionautomaticallybymarkerCheckBoxValueChanged, true);
-            app.detectWalkingByMarker.Position = [324 640 73 22];
+            app.detectWalkingByMarker.Position = [330 676 73 22];
             app.detectWalkingByMarker.Value = 'LTOE';
 
             % Create detectFPbyMarker
             app.detectFPbyMarker = uieditfield(app.PrepareC3DfileUIFigure, 'text');
             app.detectFPbyMarker.ValueChangedFcn = createCallbackFcn(app, @detectforceplatesautomaticallyCheckBoxValueChanged, true);
-            app.detectFPbyMarker.Position = [245 619 73 22];
+            app.detectFPbyMarker.Position = [251 655 73 22];
             app.detectFPbyMarker.Value = 'LTOE';
 
-            % Create v16Label
-            app.v16Label = uilabel(app.PrepareC3DfileUIFigure);
-            app.v16Label.Position = [1246 784 28 22];
-            app.v16Label.Text = 'v1.6';
+            % Create v17Label
+            app.v17Label = uilabel(app.PrepareC3DfileUIFigure);
+            app.v17Label.Position = [1467 872 28 22];
+            app.v17Label.Text = 'v1.7';
 
             % Create filterEMGandexporttostoCheckBox
             app.filterEMGandexporttostoCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.filterEMGandexporttostoCheckBox.ValueChangedFcn = createCallbackFcn(app, @filterEMGandexporttostoCheckBoxValueChanged, true);
             app.filterEMGandexporttostoCheckBox.Text = 'filter EMG and export to *.sto';
-            app.filterEMGandexporttostoCheckBox.Position = [45 521 176 22];
+            app.filterEMGandexporttostoCheckBox.Position = [51 557 176 22];
             app.filterEMGandexporttostoCheckBox.Value = true;
 
             % Create SelectexistingCSVButton
             app.SelectexistingCSVButton = uibutton(app.PrepareC3DfileUIFigure, 'push');
             app.SelectexistingCSVButton.ButtonPushedFcn = createCallbackFcn(app, @SelectexistingCSVButtonPushed, true);
-            app.SelectexistingCSVButton.Position = [371 496 121 22];
+            app.SelectexistingCSVButton.Position = [377 532 121 22];
             app.SelectexistingCSVButton.Text = 'Select existing CSV';
 
             % Create createCSVandopenButton
             app.createCSVandopenButton = uibutton(app.PrepareC3DfileUIFigure, 'push');
             app.createCSVandopenButton.ButtonPushedFcn = createCallbackFcn(app, @createCSVandopenButtonPushed, true);
-            app.createCSVandopenButton.Position = [217 496 130 22];
+            app.createCSVandopenButton.Position = [223 532 130 22];
             app.createCSVandopenButton.Text = 'create CSV and open';
 
             % Create renameEMGlabelsCheckBox
             app.renameEMGlabelsCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.renameEMGlabelsCheckBox.Text = 'rename EMG labels';
-            app.renameEMGlabelsCheckBox.Position = [71 496 128 22];
-            app.renameEMGlabelsCheckBox.Value = true;
+            app.renameEMGlabelsCheckBox.Position = [77 532 128 22];
 
             % Create EMGfactorSpinnerLabel
             app.EMGfactorSpinnerLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.EMGfactorSpinnerLabel.HorizontalAlignment = 'right';
-            app.EMGfactorSpinnerLabel.Position = [253 521 66 22];
+            app.EMGfactorSpinnerLabel.Position = [259 557 66 22];
             app.EMGfactorSpinnerLabel.Text = 'EMG factor';
 
             % Create EMGfactorSpinner
             app.EMGfactorSpinner = uispinner(app.PrepareC3DfileUIFigure);
             app.EMGfactorSpinner.Limits = [1 10000];
             app.EMGfactorSpinner.Tooltip = {'Use this factor if output signal has steps.'; 'Of course, you need to have the same factor for all trials of the same participant!'};
-            app.EMGfactorSpinner.Position = [330 521 119 22];
+            app.EMGfactorSpinner.Position = [336 557 119 22];
             app.EMGfactorSpinner.Value = 1;
 
             % Create forceplatecontactsLabel
             app.forceplatecontactsLabel = uilabel(app.PrepareC3DfileUIFigure);
             app.forceplatecontactsLabel.FontWeight = 'bold';
             app.forceplatecontactsLabel.Visible = 'off';
-            app.forceplatecontactsLabel.Position = [647 640 136 22];
+            app.forceplatecontactsLabel.Position = [653 680 136 22];
             app.forceplatecontactsLabel.Text = 'force plate contacts';
 
             % Create Ignorec3deventsCheckBox
             app.Ignorec3deventsCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.Ignorec3deventsCheckBox.ValueChangedFcn = createCallbackFcn(app, @Ignorec3deventsCheckBoxValueChanged, true);
             app.Ignorec3deventsCheckBox.Text = 'Ignore c3d events and set forceplate contacts manually';
-            app.Ignorec3deventsCheckBox.Position = [582 678 320 22];
+            app.Ignorec3deventsCheckBox.Position = [590 712 320 22];
 
             % Create ClimbingCheckBox
             app.ClimbingCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.ClimbingCheckBox.Text = 'Climbing';
-            app.ClimbingCheckBox.Position = [277 678 69 22];
+            app.ClimbingCheckBox.Position = [277 766 69 22];
 
             % Create filtermarkersCheckBox
             app.filtermarkersCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.filtermarkersCheckBox.Text = 'filter markers';
-            app.filtermarkersCheckBox.Position = [45 551 92 22];
+            app.filtermarkersCheckBox.Position = [51 587 92 22];
 
             % Create filterorderSpinnerLabel_Marker
             app.filterorderSpinnerLabel_Marker = uilabel(app.PrepareC3DfileUIFigure);
             app.filterorderSpinnerLabel_Marker.HorizontalAlignment = 'right';
-            app.filterorderSpinnerLabel_Marker.Position = [156 551 59 22];
+            app.filterorderSpinnerLabel_Marker.Position = [162 587 59 22];
             app.filterorderSpinnerLabel_Marker.Text = 'filter order';
 
             % Create filterorderSpinner_Marker
             app.filterorderSpinner_Marker = uispinner(app.PrepareC3DfileUIFigure);
             app.filterorderSpinner_Marker.Step = 2;
             app.filterorderSpinner_Marker.Limits = [2 10];
-            app.filterorderSpinner_Marker.Position = [226 551 53 22];
+            app.filterorderSpinner_Marker.Position = [232 587 53 22];
             app.filterorderSpinner_Marker.Value = 2;
 
             % Create cutofffrequencySpinner_2Label
             app.cutofffrequencySpinner_2Label = uilabel(app.PrepareC3DfileUIFigure);
             app.cutofffrequencySpinner_2Label.HorizontalAlignment = 'right';
-            app.cutofffrequencySpinner_2Label.Position = [293 551 91 22];
+            app.cutofffrequencySpinner_2Label.Position = [299 587 91 22];
             app.cutofffrequencySpinner_2Label.Text = 'cutoff frequency';
 
             % Create cutofffrequencySpinner_Marker
             app.cutofffrequencySpinner_Marker = uispinner(app.PrepareC3DfileUIFigure);
             app.cutofffrequencySpinner_Marker.Limits = [4 30];
-            app.cutofffrequencySpinner_Marker.Position = [396 551 53 22];
+            app.cutofffrequencySpinner_Marker.Position = [402 587 53 22];
             app.cutofffrequencySpinner_Marker.Value = 5;
 
             % Create normalizeEMGCheckBox
             app.normalizeEMGCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.normalizeEMGCheckBox.Text = 'normalize EMG';
-            app.normalizeEMGCheckBox.Position = [461 521 105 22];
-            app.normalizeEMGCheckBox.Value = true;
+            app.normalizeEMGCheckBox.Position = [467 557 105 22];
 
             % Create invertforcesensorsCheckBox
             app.invertforcesensorsCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.invertforcesensorsCheckBox.Text = 'invert force sensors';
-            app.invertforcesensorsCheckBox.Position = [360 678 126 22];
+            app.invertforcesensorsCheckBox.Position = [360 766 126 22];
 
             % Create mirrorCheckBox
             app.mirrorCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
             app.mirrorCheckBox.Tooltip = {'EMG stays the same!'};
             app.mirrorCheckBox.Text = 'mirror';
-            app.mirrorCheckBox.Position = [491 678 53 22];
+            app.mirrorCheckBox.Position = [491 766 53 22];
+
+            % Create AMTITandemTreadmillCheckBox
+            app.AMTITandemTreadmillCheckBox = uicheckbox(app.PrepareC3DfileUIFigure);
+            app.AMTITandemTreadmillCheckBox.ValueChangedFcn = createCallbackFcn(app, @AMTITandemTreadmillCheckBoxValueChanged, true);
+            app.AMTITandemTreadmillCheckBox.Tooltip = {'EMG stays the same!'};
+            app.AMTITandemTreadmillCheckBox.Text = 'AMTI Tandem Treadmill';
+            app.AMTITandemTreadmillCheckBox.Position = [278 735 148 22];
 
             % Show the figure after all components are created
             app.PrepareC3DfileUIFigure.Visible = 'on';
