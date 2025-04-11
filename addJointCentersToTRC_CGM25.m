@@ -1,5 +1,5 @@
 folder = 'C:\Users\willi\ucloud\PhD\GaitModifications\TestData\static01';
-
+filename = 'marker_experimental.trc';
 markerData = load_marker_trc(fullfile(folder, 'marker_experimental.trc'));
 markerNames = fieldnames(markerData);
 
@@ -79,59 +79,29 @@ for t=1:size(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RASI'), :, 
     rotationmatrix=[];
 end
 
-text = fileread(fullfile(folder, 'marker_experimental.trc'));
-lines = strsplit(text, '\n');
-data = [];
-for i = 1 : numel(lines)
-    data{i} = strsplit(lines{i}, '\t', 'CollapseDelimiters', false);
+
+uniqueMarkerNames = [];
+for m = 1 : numel(markerNames)
+    if ~strcmpi(markerNames{m}, 'time') && ~strcmpi(markerNames{m}, 'frame')
+        uniqueMarkerNames{end+1} = markerNames{m}(1:end-2);
+    end
+end
+uniqueMarkerNames = unique(uniqueMarkerNames);
+
+markerDataInMat = [];
+for m = 1 : numel(uniqueMarkerNames)
+    markerDataInMat.(uniqueMarkerNames{m}) = [cell2mat(markerData.([uniqueMarkerNames{m} '_X'])), cell2mat(markerData.([uniqueMarkerNames{m} '_Y'])), cell2mat(markerData.([uniqueMarkerNames{m} '_Z']))];
 end
 
 jointCenterNames = fieldnames(JointCenters);
-origNrOfCols = numel(data{7});
-for row = 7 : numel(data) - 1
-    for marker = 1 : numel(jointCenterNames)
-        col = origNrOfCols + (marker-1)*3;
-        if marker < numel(jointCenterNames)
-            data{4}{col} = [jointCenterNames{marker} 'WK'];
-        else
-            data{4}{col} = [jointCenterNames{marker} 'WK '];
-        end
-        for xyz = 1 : 3
-            col = origNrOfCols + (marker-1)*3 + xyz - 1;
-            data{row}{col} = JointCenters.(jointCenterNames{marker})(row-6, xyz);
-            switch xyz
-                case 1
-                    data{5}{col} = ['X' num2str((origNrOfCols/ 3) + marker - 1) ' '];
-                case 2
-                    data{5}{col} = ['Y' num2str((origNrOfCols/ 3) + marker - 1) ' '];
-                case 3
-                    data{5}{col} = ['Z' num2str((origNrOfCols/ 3) + marker - 1) ' '];
-            end
-        end
-    end
+for j = 1 : numel(jointCenterNames)
+    markerDataInMat.(jointCenterNames{j}) = JointCenters.(jointCenterNames{j});
 end
 
-data{1}{4} = strrep(data{1}{4}, '\', '\\');
-data{3}{4} = str2double(data{3}{4}) + 6;
-
-finalStr = '';
-for row = 1 : numel(data)-1
-    rowStr = '';
-    for col = 1 : numel(data{row})
-        try rowStr = [rowStr, num2str(data{row}{col}), '\t'];
-        catch rowStr = [rowStr, data{row}{col}, '\t'];
-        end
-    end
-    if ~isempty(rowStr)
-        rowStr(end-2 : end) = [];
-        rowStr = [rowStr, '\n'];
-    else
-        rowStr = '\n';
-    end
-
-    finalStr = [finalStr, rowStr];
+if isfield(markerData, 'Time')
+    time = cell2mat(markerData.Time);
+else
+    time = cell2mat(markerData.time);
 end
 
-fid = fopen(fullfile(folder, 'marker_experimental_with_JointCenters.trc'),'wt');
-fprintf(fid, finalStr);
-fclose(fid);
+writeTRCFile(fullfile(folder, strrep(filename, '.trc', '_withJointCenters.trc')), markerDataInMat, time);
