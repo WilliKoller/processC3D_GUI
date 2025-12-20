@@ -1,5 +1,5 @@
 app = processC3D_exported;
-app.path = 'pathToC3DFiles';
+app.path = 'C:\Users\Willi\SynologyDrive\BBAM_SS2025\Anna\2025-05-12';
 % app.emgLabelCSVPath = 'C:\Users\Willi\SynologyDrive\Hanging_Paper\emg_labels_d2_v2.csv';
 fileList = dir(fullfile(app.path, '**', '*.c3d'));
 
@@ -12,15 +12,19 @@ for i = 1 : numel(fileList)
         % app.ClimbingCheckBox.Value = 1;
         app.detectwalkingdirectionautomaticallybymarkerCheckBox.Value = 0;
         app.rotatearoundyaxisDropDown.Value = '270°';
-        app.detectforceplatesautomaticallyCheckBox.Value = 1;
-        app.Ignorec3deventsCheckBox.Value = 0;
-        app.doPostZeroLevellingCheckBox.Value = 1;
+        app.detectforceplatesautomaticallyCheckBox.Value = 0;
+        app.Ignorec3deventsCheckBox.Value = 1;
+        app.doPostZeroLevellingCheckBox.Value = 0;
         app.validfootstrikeeventsLabel.Visible = "on";
         app.forceplatecontactsLabel.Visible = "off";
 
         app.filtermarkersCheckBox.Value = 0;
-        app.filterEMGandexporttostoCheckBox.Value = 0;
+        % app.filterEMGandexporttostoCheckBox.Value = 0;
         app.filterGRFsCheckBox.Value = 1;
+        app.cutofffrequencySpinner.Value = 100;
+        app.filterEMGandexporttostoCheckBox.Value = 1;
+
+
 
         app.processC3Dfile();
 

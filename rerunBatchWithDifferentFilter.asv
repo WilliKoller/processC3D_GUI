@@ -1,16 +1,16 @@
 app = processC3D_exported;
-app.path = 'Z:\koller\Study_ReliabilityModelCreationWorkflows\raw_data\XLH\GaitData';
+app.path = 'C:\Users\Willi\ucloud\PhD\Study_LongitudinalMSK\GaitData_20Hz';
 % app.emgLabelCSVPath = 'C:\Users\Willi\SynologyDrive\Hanging_Paper\emg_labels_d2_v2.csv';
 fileList = dir(fullfile(app.path, '**', '*.c3d'));
 
 for i = 1: numel(fileList)
-    if ~contains(fileList(i).folder, 'TD01') && ~strcmp(fileList(i).name, 'c3dfile.c3d') && ~strcmp(fileList(i).name, 'tmp.c3d') && isfolder(fullfile(fileList(i).folder, strrep(fileList(i).name, '.c3d', '')))
-%
-        % pause(0.5);
+    if ~strcmp(fileList(i).name, 'c3dfile.c3d') && isfolder(fullfile(fileList(i).folder, strrep(fileList(i).name, '.c3d', '')))
+
+        pause(0.5);
         app.path = fileList(i).folder;
         copyfile(fullfile(app.path, fileList(i).name), fullfile(app.path, 'tmp.c3d'));
 
-        % pause(0.5);
+        pause(0.5);
         app.c3dFileName = 'tmp.c3d';
         disp(['processing' fileList(i).name]);
 
@@ -22,21 +22,20 @@ for i = 1: numel(fileList)
 
         app.filtermarkersCheckBox.Value = 0;
         app.filterGRFsCheckBox.Value = 1;
-        % app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 1;
+        app.setGRFstozerooutsideregionoffootcontactCheckBox.Value = 1;
         app.filterEMGandexporttostoCheckBox.Value = 0;
 
         app.processC3Dfile();
-        % pause(0.2);
+        pause(0.5);
 
         app.CreatefilesButtonPushed(0);
 
-        % pause(0.2);
         
         if isfile(fullfile(app.path, 'tmp', 'grf.mot'))
             copyfile(fullfile(app.path, 'tmp', 'grf.mot'), fullfile(app.path, strrep(fileList(i).name, '.c3d', ''), 'grf.mot'));
-            % rmdir(fullfile(app.path, 'tmp'), 's');
+            rmdir(fullfile(app.path, 'tmp'), 's');
         end
-        % delete(fullfile(app.path, 'tmp.c3d'));
+        delete(fullfile(app.path, 'tmp.c3d'));
         s = dir(fullfile(app.path, strrep(fileList(i).name, '.c3d', ''), 'grf.mot'));
         if s.bytes < 100000
             disp('might be wrong');
@@ -44,7 +43,7 @@ for i = 1: numel(fileList)
 
         if isfile(fullfile(app.path, 'tmp', 'marker_experimental.trc'))
             copyfile(fullfile(app.path, 'tmp', 'marker_experimental.trc'), fullfile(app.path, strrep(fileList(i).name, '.c3d', ''), 'marker_experimental.trc'));
-            % rmdir(fullfile(app.path, 'tmp'), 's');
+            rmdir(fullfile(app.path, 'tmp'), 's');
         end
         delete(fullfile(app.path, 'tmp.c3d'));
         s = dir(fullfile(app.path, strrep(fileList(i).name, '.c3d', ''), 'marker_experimental.trc'));

@@ -918,7 +918,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                 c3d_tmp.rotateData('y', app.rotationAngle);
                 d.Value = d.Value + 0.1;
                 d.Message = 'writing marker_experimental.trc file with marker locations...';
-                c3d_tmp.writeTRC(fullfile(output_folder, 'marker_experimental.trc'));
+                % c3d_tmp.writeTRC(fullfile(output_folder, 'marker_experimental.trc'));
 
                 if app.filtermarkersCheckBox.Value
                     disp('filtering marker data...')
