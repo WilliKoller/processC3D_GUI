@@ -206,6 +206,7 @@ classdef processC3D_exported < matlab.apps.AppBase
             timeThresholdFPs = 10;
             if app.AMTITandemTreadmillCheckBox.Value == 1
                 timeThresholdFPs = 5;
+                threshold = 5;
             end
             if app.filterGRFsCheckBox.Value && app.c3d.getNumForces() > 0
                 app.grf_forces_adjusted = [];
@@ -247,7 +248,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                     footStrikes = find(nanValues < 0);
                     footOffs = find(nanValues > 0)-1;
 
-                    validChanges = find(footOffs - footStrikes > app.frequency_);
+                    validChanges = find(footOffs - footStrikes > app.frequency_ * 0.5);
 
                     footStrikes = footStrikes(validChanges);
                     footOffs = footOffs(validChanges);
@@ -330,13 +331,10 @@ classdef processC3D_exported < matlab.apps.AppBase
                             else
                                 % no selected steps on this force plate, filter where Fz is over threshold
                                 idxFootContact = ~isnan(Fz);
-
-                                for f = 1 : numel(fieldsOfThisPlate)
-                                    newData = zeros(size(app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})));
-                                    filteredData = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})(idxFootContact));
-                                    newData(idxFootContact) = filteredData;
-                                    app.grf_forces_adjusted.(fieldsOfThisPlate{f}) = newData;
-                                end
+                                newData = zeros(size(app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})));
+                                filteredData = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})(idxFootContact));
+                                newData(idxFootContact) = filteredData;
+                                app.grf_forces_adjusted.(fieldsOfThisPlate{f}) = newData;
                             end
                         end
                     else
@@ -345,8 +343,10 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                         for f = 1 : numel(fieldsOfThisPlate)
                             newData = zeros(size(app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})));
-                            filteredData = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})(idxFootContact));
-                            newData(idxFootContact) = filteredData;
+                            try
+                                filteredData = filtfilt(filter_b, filter_a, app.grf_forces_zero_leveled.(fieldsOfThisPlate{f})(idxFootContact));
+                                newData(idxFootContact) = filteredData;
+                            end
                             app.grf_forces_adjusted.(fieldsOfThisPlate{f}) = newData;
                         end
                     end
@@ -918,7 +918,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                 c3d_tmp.rotateData('y', app.rotationAngle);
                 d.Value = d.Value + 0.1;
                 d.Message = 'writing marker_experimental.trc file with marker locations...';
-                % c3d_tmp.writeTRC(fullfile(output_folder, 'marker_experimental.trc'));
+                c3d_tmp.writeTRC(fullfile(output_folder, 'marker_experimental.trc'));
 
                 if app.filtermarkersCheckBox.Value
                     disp('filtering marker data...')
@@ -1070,10 +1070,14 @@ classdef processC3D_exported < matlab.apps.AppBase
                 counter = 1;
                 if app.Ignorec3deventsCheckBox.Value == 0
                     if app.AMTITandemTreadmillCheckBox.Value
-                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.rightStepForcePlateAssignment(i, 2));
-                        counter = counter + 1;
-                        grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.leftStepForcePlateAssignment(i, 2));
-                        counter = counter + 1;
+                        for i = 1 : size(app.rightStepForcePlateAssignment, 1)
+                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(app.rightStepForcePlateAssignment(i, 2));
+                            counter = counter + 1;
+                        end
+                        for i = 1 : size(app.leftStepForcePlateAssignment, 1)
+                            grforces_generated.ExternalLoads.objects.ExternalForce(counter) = grforces.ExternalLoads.objects.ExternalForce(9 + app.leftStepForcePlateAssignment(i, 2));
+                            counter = counter + 1;
+                        end
                     else
                         if ~app.mirrorCheckBox.Value
                             for i = 1 : size(app.rightStepForcePlateAssignment, 1)
@@ -1325,13 +1329,19 @@ classdef processC3D_exported < matlab.apps.AppBase
             try
                 if app.fileLoaded && app.c3d.getNumForces() > 0
                     for i = 1 : (numel(fieldnames(app.grf_forces)) - 1) / 9
-                        plot(app.UIAxesGRFs, app.grf_forces.(['ground_force_' num2str(i) '_vy']));
+                        if app.AMTITandemTreadmillCheckBox.Value == 0 || (app.AMTITandemTreadmillCheckBox.Value == 1 && (i == 7 || i ==8))
+                            plot(app.UIAxesGRFs, app.grf_forces.(['ground_force_' num2str(i) '_vy']));
+                        end
                     end
 
                     filterGRFs(app)
 
                     verticalForceFields = fieldnames(app.grf_forces_adjusted);
                     verticalForceFields = verticalForceFields(contains(verticalForceFields, '_vy'));
+                    if app.AMTITandemTreadmillCheckBox.Value == 1
+                        verticalForceFields = verticalForceFields(or(contains(verticalForceFields, '_7'), contains(verticalForceFields, '_8')));
+                    end
+
                     for i = 1 : numel(verticalForceFields)
                         plot(app.UIAxesGRFs, app.grf_forces_adjusted.(verticalForceFields{i}));
                     end
@@ -1356,11 +1366,11 @@ classdef processC3D_exported < matlab.apps.AppBase
             if app.AMTITandemTreadmillCheckBox.Value
                 for i = 1 : size(app.leftListBox.Value, 2)
                     app.leftStepForcePlateAssignment(end+1, 1) = str2double(app.leftListBox.Value{i});
-                    app.leftStepForcePlateAssignment(end, 2) = 2; % FP2 is always left leg
+                    app.leftStepForcePlateAssignment(end, 2) = 7; % FP7 is always left leg
                 end
                 for i = 1 : size(app.rightListBox.Value, 2)
                     app.rightStepForcePlateAssignment(end+1, 1) = str2double(app.rightListBox.Value{i});
-                    app.rightStepForcePlateAssignment(end, 2) = 1; % FP1 is always right leg
+                    app.rightStepForcePlateAssignment(end, 2) = 8; % FP8 is always right leg
                 end
                 app.rightStepForcePlateAssignmentAll = app.rightStepForcePlateAssignment;
                 app.leftStepForcePlateAssignmentAll = app.leftStepForcePlateAssignment;
@@ -1588,7 +1598,7 @@ classdef processC3D_exported < matlab.apps.AppBase
             % value = app.AMTITandemTreadmillCheckBox.Value;
             app.doPostZeroLevellingCheckBox.Value = 0;
             app.detectwalkingdirectionautomaticallybymarkerCheckBox.Value = 0;
-            app.rotatearoundyaxisDropDown.Value = '90°';
+            app.rotatearoundyaxisDropDown.Value = '270°';
             app.rotatearoundyaxisDropDown.Enable = "on";
             app.detectforceplatesautomaticallyCheckBox.Value = 0;
         end
@@ -1610,11 +1620,8 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.UIAxesSteps = uiaxes(app.PrepareC3DfileUIFigure);
             title(app.UIAxesSteps, 'Steps')
             ylabel(app.UIAxesSteps, '\color{red}left \color{black} and \color{green} right \color{black} cycles')
-            app.UIAxesSteps.XTickLabelRotation = 0;
             app.UIAxesSteps.YTick = [-1 -0.5 0 0.5 1];
-            app.UIAxesSteps.YTickLabelRotation = 0;
             app.UIAxesSteps.YTickLabel = {'-1'; '-0.5'; '0'; '0.5'; '1'};
-            app.UIAxesSteps.ZTickLabelRotation = 0;
             app.UIAxesSteps.Position = [16 327 1490 158];
 
             % Create UIAxesGRFs
@@ -1622,9 +1629,6 @@ classdef processC3D_exported < matlab.apps.AppBase
             title(app.UIAxesGRFs, 'GRFs')
             xlabel(app.UIAxesGRFs, 'frame')
             ylabel(app.UIAxesGRFs, '[N]')
-            app.UIAxesGRFs.XTickLabelRotation = 0;
-            app.UIAxesGRFs.YTickLabelRotation = 0;
-            app.UIAxesGRFs.ZTickLabelRotation = 0;
             app.UIAxesGRFs.YGrid = 'on';
             app.UIAxesGRFs.Position = [16 24 1490 304];
 
