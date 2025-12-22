@@ -1364,12 +1364,12 @@ classdef processC3D_exported < matlab.apps.AppBase
             app.leftStepForcePlateAssignment = [];
             app.rightStepForcePlateAssignment = [];
             if app.AMTITandemTreadmillCheckBox.Value
-                for i = 1 : size(app.leftListBox.Value, 2)
-                    app.leftStepForcePlateAssignment(end+1, 1) = str2double(app.leftListBox.Value{i});
+                if size(app.leftListBox.Value, 2) >= 1
+                    app.leftStepForcePlateAssignment(end+1, 1) = str2double(app.leftListBox.Value{1});
                     app.leftStepForcePlateAssignment(end, 2) = 7; % FP7 is always left leg
                 end
-                for i = 1 : size(app.rightListBox.Value, 2)
-                    app.rightStepForcePlateAssignment(end+1, 1) = str2double(app.rightListBox.Value{i});
+                if size(app.rightListBox.Value, 2) >= 1
+                    app.rightStepForcePlateAssignment(end+1, 1) = str2double(app.rightListBox.Value{1});
                     app.rightStepForcePlateAssignment(end, 2) = 8; % FP8 is always right leg
                 end
                 app.rightStepForcePlateAssignmentAll = app.rightStepForcePlateAssignment;
