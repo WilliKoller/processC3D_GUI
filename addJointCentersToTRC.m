@@ -79,6 +79,7 @@ for t=1:size(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RASI'), :, 
     rotationmatrix=[];
 end
 
+% remove /1000 if m or mm mismatch!
 markerData.LHJC_X = JointCenters.LHJC(:, 1) / 1000;
 markerData.LHJC_Y = JointCenters.LHJC(:, 2) / 1000;
 markerData.LHJC_Z = JointCenters.LHJC(:, 3) / 1000;
