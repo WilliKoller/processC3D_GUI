@@ -23,10 +23,17 @@ end
 % data_label = file_data(data_label_index,:);
 
 %% create an array with all of the numerical data
-num_data = cell(m - 6, n);
-for row = 1 : m - 6
+for row = 4 : 7
+    if ~isnan(file_data{row, 1})
+        offset = row+1;
+        break;
+    end
+end
+
+num_data = cell(m - offset, n);
+for row = 1 : m - offset
     for col = 1 : n
-        num_data{row, col} = file_data{row+6, col};
+        num_data{row, col} = file_data{row+offset, col};
     end
 end
 

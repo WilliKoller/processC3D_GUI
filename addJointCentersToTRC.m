@@ -79,59 +79,26 @@ for t=1:size(squeeze(markerDataOfInterest(strcmp(markersOfInterest, 'RASI'), :, 
     rotationmatrix=[];
 end
 
-text = fileread(fullfile(folder, 'marker_experimental.trc'));
-lines = strsplit(text, '\n');
-data = [];
-for i = 1 : numel(lines)
-    data{i} = strsplit(lines{i}, '\t', 'CollapseDelimiters', false);
-end
+markerData.LHJC_X = JointCenters.LHJC(:, 1) / 1000;
+markerData.LHJC_Y = JointCenters.LHJC(:, 2) / 1000;
+markerData.LHJC_Z = JointCenters.LHJC(:, 3) / 1000;
+markerData.RHJC_X = JointCenters.RHJC(:, 1) / 1000;
+markerData.RHJC_Y = JointCenters.RHJC(:, 2) / 1000;
+markerData.RHJC_Z = JointCenters.RHJC(:, 3) / 1000;
 
-jointCenterNames = fieldnames(JointCenters);
-origNrOfCols = numel(data{7});
-for row = 7 : numel(data) - 1
-    for marker = 1 : numel(jointCenterNames)
-        col = origNrOfCols + (marker-1)*3;
-        if marker < numel(jointCenterNames)
-            data{4}{col} = [jointCenterNames{marker} 'WK'];
-        else
-            data{4}{col} = [jointCenterNames{marker} 'WK '];
-        end
-        for xyz = 1 : 3
-            col = origNrOfCols + (marker-1)*3 + xyz - 1;
-            data{row}{col} = JointCenters.(jointCenterNames{marker})(row-6, xyz);
-            switch xyz
-                case 1
-                    data{5}{col} = ['X' num2str((origNrOfCols/ 3) + marker - 1) ' '];
-                case 2
-                    data{5}{col} = ['Y' num2str((origNrOfCols/ 3) + marker - 1) ' '];
-                case 3
-                    data{5}{col} = ['Z' num2str((origNrOfCols/ 3) + marker - 1) ' '];
-            end
-        end
-    end
-end
+markerData.LKJC_X = JointCenters.LKJC(:, 1) / 1000;
+markerData.LKJC_Y = JointCenters.LKJC(:, 2) / 1000;
+markerData.LKJC_Z = JointCenters.LKJC(:, 3) / 1000;
+markerData.RKJC_X = JointCenters.RKJC(:, 1) / 1000;
+markerData.RKJC_Y = JointCenters.RKJC(:, 2) / 1000;
+markerData.RKJC_Z = JointCenters.RKJC(:, 3) / 1000;
 
-data{1}{4} = strrep(data{1}{4}, '\', '\\');
-data{3}{4} = str2double(data{3}{4}) + 6;
+markerData.LAJC_X = JointCenters.LAJC(:, 1) / 1000;
+markerData.LAJC_Y = JointCenters.LAJC(:, 2) / 1000;
+markerData.LAJC_Z = JointCenters.LAJC(:, 3) / 1000;
+markerData.RAJC_X = JointCenters.RAJC(:, 1) / 1000;
+markerData.RAJC_Y = JointCenters.RAJC(:, 2) / 1000;
+markerData.RAJC_Z = JointCenters.RAJC(:, 3) / 1000;
 
-finalStr = '';
-for row = 1 : numel(data)-1
-    rowStr = '';
-    for col = 1 : numel(data{row})
-        try rowStr = [rowStr, num2str(data{row}{col}), '\t'];
-        catch rowStr = [rowStr, data{row}{col}, '\t'];
-        end
-    end
-    if ~isempty(rowStr)
-        rowStr(end-2 : end) = [];
-        rowStr = [rowStr, '\n'];
-    else
-        rowStr = '\n';
-    end
-
-    finalStr = [finalStr, rowStr];
-end
-
-fid = fopen(fullfile(folder, 'marker_experimental_with_JointCenters.trc'),'wt');
-fprintf(fid, finalStr);
-fclose(fid);
+markerDataTime = cell2mat(markerData.Time);
+writeTRCFile(fullfile(folder, 'marker_experimental_with_JointCenters.trc'), markerData, markerDataTime, 1);
