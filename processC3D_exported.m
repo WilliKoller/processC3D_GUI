@@ -1268,7 +1268,7 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                             footStrikes = str2double(app.leftFootStrikeList) - (app.firstFrame_-1);
                             for i = 1 : size(cycle.left.startFrame, 2)
-                                cycle.left.end(i) = footStrikes( find( footStrikes > cycle.left.start(i), 1 ) ) - 1;
+                                cycle.left.end(i) = footStrikes( find( footStrikes > cycle.left.start(i) + 2, 1 ) ) - 1;
                                 cycle.left.endFrame(i) = footStrikes( find( footStrikes > cycle.left.startFrame(i), 1 ) );
                                 cycle.left.endTime(i) = cycle.left.endFrame(i) / app.frequency_;
                                 if ~isempty(app.leftFootOffList)
@@ -1301,7 +1301,7 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                             footStrikes = str2double(app.rightFootStrikeList) - (app.firstFrame_ - 1);
                             for i = 1 : size(cycle.right.start, 2)
-                                cycle.right.end(i) = footStrikes( find( footStrikes > cycle.right.start(i), 1 ) ) - 1;
+                                cycle.right.end(i) = footStrikes( find( footStrikes > cycle.right.start(i) + 2, 1 ) ) - 1;
                                 cycle.right.endFrame(i) = footStrikes( find( footStrikes > cycle.right.startFrame(i), 1 ) );
                                 cycle.right.endTime(i) = cycle.right.endFrame(i) / app.frequency_;
                                 if ~isempty(app.rightFootOffList)
