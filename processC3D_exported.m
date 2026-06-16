@@ -248,6 +248,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                     footOffs = find(nanValues > 0)-1;
 
                     validChanges = find(footOffs - footStrikes > app.frequency_ * 0.5);
+                    forceFieldFilterPadding = floor(0.05*app.forceFrequency);
 
                     footStrikes = footStrikes(validChanges);
                     footOffs = footOffs(validChanges);
@@ -316,9 +317,10 @@ classdef processC3D_exported < matlab.apps.AppBase
 
                                     elseif contains(fieldsOfThisPlate{f}(end-4:end), '_v') || contains(fieldsOfThisPlate{f}(end-4:end), '_m')
                                         dataToFilter = app.grf_forces.(fieldsOfThisPlate{f})(idxFootContact);
+                                        dataToFilter = [zeros(forceFieldFilterPadding, 1); dataToFilter; zeros(forceFieldFilterPadding, 1)]; % add 0.05s of zeros at the start and end to make filtering better
                                         % filter the data
                                         filteredStep = filtfilt(filter_b, filter_a, dataToFilter);
-                                        newData(idxFootContact) = filteredStep;
+                                        newData(idxFootContact) = filteredStep(1+forceFieldFilterPadding : end-forceFieldFilterPadding);
                                     else
                                         disp('not sure what field this is');
                                     end
@@ -843,7 +845,6 @@ classdef processC3D_exported < matlab.apps.AppBase
                         app.detectWalkingByMarker.FontColor = 'black';
                         markerToTrack = app.detectWalkingByMarker.Value;
 
-                        
                         firstValidLocation = nan(1, 3);
                         for i = 1 : size(app.markers.(markerToTrack), 1)
                             if ~isnan(app.markers.(markerToTrack)(i, :))
@@ -859,7 +860,6 @@ classdef processC3D_exported < matlab.apps.AppBase
                             end
                         end
                         distanceTravelled = lastValidLocation - firstValidLocation;
-                        
                         [~, maxInd] = max(abs(distanceTravelled));
                         if maxInd == 3
                             if distanceTravelled(maxInd) < 0
@@ -1267,16 +1267,19 @@ classdef processC3D_exported < matlab.apps.AppBase
                             cycle.left.startTime = cycle.left.startFrame / app.frequency_;
 
                             footStrikes = str2double(app.leftFootStrikeList) - (app.firstFrame_-1);
+                            contraLateralFootStrikes = str2double(app.rightFootStrikeList) - (app.firstFrame_ - 1);
                             for i = 1 : size(cycle.left.startFrame, 2)
-                                cycle.left.end(i) = footStrikes( find( footStrikes > cycle.left.start(i) + 2, 1 ) ) - 1;
+                                cycle.left.end(i) = footStrikes( find( footStrikes > cycle.left.start(i)+2, 1 ) ) - 1;
                                 cycle.left.endFrame(i) = footStrikes( find( footStrikes > cycle.left.startFrame(i), 1 ) );
                                 cycle.left.endTime(i) = cycle.left.endFrame(i) / app.frequency_;
                                 if ~isempty(app.leftFootOffList)
                                     try
-                                        cycle.left.footOff(i) = app.leftFootOffList( find( app.leftFootOffList  > cycle.left.start(i) + app.firstFrame_, 1 ) ) - app.firstFrame_;
+                                        cycle.left.footOff(i) = app.leftFootOffList( find( app.leftFootOffList > cycle.left.start(i) + app.firstFrame_, 1 ) ) - app.firstFrame_;
+                                        cycle.left.footOffFrame(i) = app.leftFootOffList( find( app.leftFootOffList  > cycle.left.startFrame(i) + app.firstFrame_, 1 ) ) - (app.firstFrame_-2);
+                                        cycle.left.footOffTime(i) = cycle.left.footOffFrame(i) / app.frequency_;
                                     catch e
                                         if contains(e.message, 'Unable to perform assignment because the left and right sides have a different number of elements')
-                                            writeLog(app, ['No Foot Off Event for left step starting at frame ' num2str(cycle.left.start(i) + app.firstFrame_)]);
+                                            writeLog(app, ['No Foot Off Event for left step starting at frame ' num2str(cycle.left.startFrame(i) + app.firstFrame_)]);
                                         end
                                         cycle.left.footOff(i) = cycle.left.end(i);
                                         cycle.left.footOffFrame(i) = cycle.left.endFrame(i);
@@ -1291,6 +1294,29 @@ classdef processC3D_exported < matlab.apps.AppBase
                                         cycle.left.leaveGroundTime(i) = cycle.left.leaveGroundFrame(i) / app.frequency_;
                                     end
                                 end
+                                if ~isempty(app.rightFootOffList)
+                                    cycle.left.contraLateralFootOff(i) = app.rightFootOffList( find( app.rightFootOffList > cycle.left.start(i) + app.firstFrame_, 1 ) ) - app.firstFrame_;
+                                    cycle.left.contraLateralFootOffFrame(i) = app.rightFootOffList( find( app.rightFootOffList  > cycle.left.startFrame(i) + app.firstFrame_, 1 ) ) - (app.firstFrame_-2);
+                                    cycle.left.contraLateralFootOffTime(i) = cycle.left.contraLateralFootOffFrame(i) / app.frequency_;
+                                end
+                                if ~isempty(contraLateralFootStrikes)
+                                    cycle.left.contraLateralFootStrike(i) = contraLateralFootStrikes( find( contraLateralFootStrikes > cycle.left.start(i) + 2, 1 ) ) - 1;
+                                    cycle.left.contraLateralFootStrikeFrame(i) = contraLateralFootStrikes( find( contraLateralFootStrikes > cycle.left.startFrame(i), 1 ) );
+                                    cycle.left.contraLateralFootStrikeTime(i) = cycle.left.contraLateralFootStrikeFrame(i) / app.frequency_;
+                                end
+                                if isfield(cycle.left, 'contraLateralFootStrike') && length(cycle.left.contraLateralFootStrike) >= i && ...
+                                        isfield(cycle.left, 'contraLateralFootOff') && length(cycle.left.contraLateralFootOff) >= i
+                                    % set a flag whether contralateral events are within start and end of the step, otherwise they are probably not correct
+                                    if cycle.left.contraLateralFootOff(i) > cycle.left.start(i) && cycle.left.contraLateralFootOff(i) < cycle.left.end(i) && ...
+                                            cycle.left.contraLateralFootStrike(i) > cycle.left.start(i) && cycle.left.contraLateralFootStrike(i) < cycle.left.end(i) && ...
+                                            cycle.left.contraLateralFootOff(i) < cycle.left.contraLateralFootStrike(i)
+                                        cycle.left.contraLateralEventsValid(i) = 1;
+                                    else
+                                        cycle.left.contraLateralEventsValid(i) = 0;
+                                    end
+                                else
+                                    cycle.left.contraLateralEventsValid(i) = 0;
+                                end
                             end
                         end
                         if ~isempty(outputSets.(outputFolderName).rightICs)
@@ -1300,8 +1326,9 @@ classdef processC3D_exported < matlab.apps.AppBase
                             cycle.right.startTime = cycle.right.startFrame / app.frequency_;
 
                             footStrikes = str2double(app.rightFootStrikeList) - (app.firstFrame_ - 1);
-                            for i = 1 : size(cycle.right.start, 2)
-                                cycle.right.end(i) = footStrikes( find( footStrikes > cycle.right.start(i) + 2, 1 ) ) - 1;
+                            contraLateralFootStrikes = str2double(app.leftFootStrikeList) - (app.firstFrame_ - 1);
+                            for i = 1 : size(cycle.right.startFrame, 2)
+                                cycle.right.end(i) = footStrikes( find( footStrikes > cycle.right.start(i)+2, 1 ) ) - 1;
                                 cycle.right.endFrame(i) = footStrikes( find( footStrikes > cycle.right.startFrame(i), 1 ) );
                                 cycle.right.endTime(i) = cycle.right.endFrame(i) / app.frequency_;
                                 if ~isempty(app.rightFootOffList)
@@ -1311,7 +1338,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                                         cycle.right.footOffTime(i) = cycle.right.footOffFrame(i) / app.frequency_;
                                     catch e
                                         if contains(e.message, 'Unable to perform assignment because the left and right sides have a different number of elements')
-                                            writeLog(app, ['No Foot Off Event for right step starting at frame ' num2str(cycle.right.start(i) + app.firstFrame_)]);
+                                            writeLog(app, ['No Foot Off Event for right step starting at frame ' num2str(cycle.right.startFrame(i) + app.firstFrame_)]);
                                         end
                                         cycle.right.footOff(i) = cycle.right.end(i);
                                         cycle.right.footOffFrame(i) = cycle.right.endFrame(i);
@@ -1325,6 +1352,29 @@ classdef processC3D_exported < matlab.apps.AppBase
                                         cycle.right.leaveGroundFrame(i) = app.rightFootOffList( find( app.rightFootOffList  > cycle.right.footOffFrame(i) + app.firstFrame_, 1 ) ) - (app.firstFrame_-2);
                                         cycle.right.leaveGroundTime(i) = cycle.right.leaveGroundFrame(i) / app.frequency_;
                                     end
+                                end
+                                if ~isempty(app.leftFootOffList)
+                                    cycle.right.contraLateralFootOff(i) = app.leftFootOffList( find( app.leftFootOffList > cycle.right.start(i) + app.firstFrame_, 1 ) ) - app.firstFrame_;
+                                    cycle.right.contraLateralFootOffFrame(i) = app.leftFootOffList( find( app.leftFootOffList  > cycle.right.startFrame(i) + app.firstFrame_, 1 ) ) - (app.firstFrame_-2);
+                                    cycle.right.contraLateralFootOffTime(i) = cycle.right.contraLateralFootOffFrame(i) / app.frequency_;
+                                end
+                                if ~isempty(contraLateralFootStrikes)
+                                    cycle.right.contraLateralFootStrike(i) = contraLateralFootStrikes( find( contraLateralFootStrikes > cycle.right.start(i) + 2, 1 ) ) - 1;
+                                    cycle.right.contraLateralFootStrikeFrame(i) = contraLateralFootStrikes( find( contraLateralFootStrikes > cycle.right.startFrame(i), 1 ) );
+                                    cycle.right.contraLateralFootStrikeTime(i) = cycle.right.contraLateralFootStrikeFrame(i) / app.frequency_;
+                                end
+                                if isfield(cycle.right, 'contraLateralFootStrike') && length(cycle.right.contraLateralFootStrike) >= i && ...
+                                        isfield(cycle.right, 'contraLateralFootOff') && length(cycle.right.contraLateralFootOff) >= i
+                                    % set a flag whether contralateral events are within start and end of the step, otherwise they are probably not correct
+                                    if cycle.right.contraLateralFootOff(i) > cycle.right.start(i) && cycle.right.contraLateralFootOff(i) < cycle.right.end(i) && ...
+                                            cycle.right.contraLateralFootStrike(i) > cycle.right.start(i) && cycle.right.contraLateralFootStrike(i) < cycle.right.end(i) && ...
+                                            cycle.right.contraLateralFootOff(i) < cycle.right.contraLateralFootStrike(i)
+                                        cycle.right.contraLateralEventsValid(i) = 1;
+                                    else
+                                        cycle.right.contraLateralEventsValid(i) = 0;
+                                    end
+                                else
+                                    cycle.right.contraLateralEventsValid(i) = 0;
                                 end
                             end
                         end
@@ -1344,7 +1394,7 @@ classdef processC3D_exported < matlab.apps.AppBase
                     firstFrame = app.firstFrame_;
                     frequency = app.frequency_;
                     forceFrequency = app.forceFrequency;
-                    
+
                     minStartTime = 10000;
                     maxEndTime = 0;
 
