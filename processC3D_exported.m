@@ -1294,12 +1294,12 @@ classdef processC3D_exported < matlab.apps.AppBase
                                         cycle.left.leaveGroundTime(i) = cycle.left.leaveGroundFrame(i) / app.frequency_;
                                     end
                                 end
-                                if ~isempty(app.rightFootOffList)
+                                if ~isempty(find( app.rightFootOffList > cycle.left.start(i) + app.firstFrame_, 1 ))
                                     cycle.left.contraLateralFootOff(i) = app.rightFootOffList( find( app.rightFootOffList > cycle.left.start(i) + app.firstFrame_, 1 ) ) - app.firstFrame_;
                                     cycle.left.contraLateralFootOffFrame(i) = app.rightFootOffList( find( app.rightFootOffList  > cycle.left.startFrame(i) + app.firstFrame_, 1 ) ) - (app.firstFrame_-2);
                                     cycle.left.contraLateralFootOffTime(i) = cycle.left.contraLateralFootOffFrame(i) / app.frequency_;
                                 end
-                                if ~isempty(contraLateralFootStrikes)
+                                if ~isempty(find( contraLateralFootStrikes > cycle.left.start(i) + 2, 1 ))
                                     cycle.left.contraLateralFootStrike(i) = contraLateralFootStrikes( find( contraLateralFootStrikes > cycle.left.start(i) + 2, 1 ) ) - 1;
                                     cycle.left.contraLateralFootStrikeFrame(i) = contraLateralFootStrikes( find( contraLateralFootStrikes > cycle.left.startFrame(i), 1 ) );
                                     cycle.left.contraLateralFootStrikeTime(i) = cycle.left.contraLateralFootStrikeFrame(i) / app.frequency_;
@@ -1353,12 +1353,12 @@ classdef processC3D_exported < matlab.apps.AppBase
                                         cycle.right.leaveGroundTime(i) = cycle.right.leaveGroundFrame(i) / app.frequency_;
                                     end
                                 end
-                                if ~isempty(app.leftFootOffList)
+                                if ~isempty(find( app.leftFootOffList > cycle.right.start(i) + app.firstFrame_, 1 ))
                                     cycle.right.contraLateralFootOff(i) = app.leftFootOffList( find( app.leftFootOffList > cycle.right.start(i) + app.firstFrame_, 1 ) ) - app.firstFrame_;
                                     cycle.right.contraLateralFootOffFrame(i) = app.leftFootOffList( find( app.leftFootOffList  > cycle.right.startFrame(i) + app.firstFrame_, 1 ) ) - (app.firstFrame_-2);
                                     cycle.right.contraLateralFootOffTime(i) = cycle.right.contraLateralFootOffFrame(i) / app.frequency_;
                                 end
-                                if ~isempty(contraLateralFootStrikes)
+                                if ~isempty(find( contraLateralFootStrikes > cycle.right.start(i) + 2, 1 ))
                                     cycle.right.contraLateralFootStrike(i) = contraLateralFootStrikes( find( contraLateralFootStrikes > cycle.right.start(i) + 2, 1 ) ) - 1;
                                     cycle.right.contraLateralFootStrikeFrame(i) = contraLateralFootStrikes( find( contraLateralFootStrikes > cycle.right.startFrame(i), 1 ) );
                                     cycle.right.contraLateralFootStrikeTime(i) = cycle.right.contraLateralFootStrikeFrame(i) / app.frequency_;
